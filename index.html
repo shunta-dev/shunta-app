@@ -1,0 +1,3664 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>積み重ね</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      --bg: #111111;
+      --bar: #2a2a2b;
+      --panel: #29292a;
+      --panel-2: #222224;
+      --panel-3: #353538;
+      --border: #3d3d40;
+      --text: #eeeeef;
+      --muted: #a6a6aa;
+      --accent: #78b9f3;
+      --accent-soft: #20384e;
+      --actual: #70c7ad;
+      --danger: #df6b6b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      display: grid;
+      min-height: 62px;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: center;
+      border-bottom: 1px solid #303033;
+      background: rgba(42, 42, 43, 0.97);
+      backdrop-filter: blur(14px);
+    }
+
+    .app-header h1 {
+      margin: 0;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+    }
+
+    .header-spacer {
+      width: 44px;
+      height: 44px;
+    }
+
+    .header-action {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      justify-self: center;
+      border: 1px solid #3d3d40;
+      border-radius: 999px;
+      background: #1b1b1d;
+      color: var(--text);
+      padding: 0;
+      font-size: 25px;
+      line-height: 1;
+    }
+
+    .header-action[hidden] {
+      display: none;
+    }
+
+    main {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 18px 16px 116px;
+    }
+
+    .tab-panel[hidden],
+    .mode-panel[hidden],
+    [hidden] {
+      display: none !important;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 17px;
+      font-weight: 650;
+    }
+
+    .helper,
+    .empty,
+    .field label,
+    .history-date,
+    .history-detail,
+    .timer-label {
+      color: var(--muted);
+    }
+
+    .helper {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .section {
+      margin-top: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel);
+    }
+
+    .section:first-child {
+      margin-top: 0;
+    }
+
+    .section-heading {
+      padding: 18px 20px 12px;
+    }
+
+    .section-content {
+      padding: 0 20px 20px;
+    }
+
+    .mode-switch {
+      display: grid;
+      width: min(360px, 100%);
+      grid-template-columns: repeat(2, 1fr);
+      margin: 0 auto 18px;
+      padding: 3px;
+      border-radius: 999px;
+      background: #29292d;
+    }
+
+    .mode-button {
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: #d2d2d5;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .mode-button[aria-selected="true"] {
+      background: #69696f;
+      color: #ffffff;
+    }
+
+    .custom-panel {
+      margin-bottom: 16px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel-2);
+    }
+
+    .custom-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .field {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 13px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="date"],
+    input[type="time"],
+    select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid #48484c;
+      border-radius: 10px;
+      outline: none;
+      background: #1d1d1f;
+      color: var(--text);
+      padding: 11px 12px;
+      font-size: 16px;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(120, 185, 243, 0.16);
+    }
+
+    .primary,
+    .secondary {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #101820;
+      font-weight: 700;
+    }
+
+    .secondary {
+      background: var(--panel-3);
+      color: var(--text);
+    }
+
+    .button-row,
+    .timer-actions,
+    .date-nav,
+    .input-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .timer-list {
+      overflow: hidden;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .timer-preset {
+      position: relative;
+      display: grid;
+      width: 100%;
+      grid-template-columns: 116px 1fr 24px;
+      align-items: center;
+      gap: 8px;
+      border: 0;
+      border-bottom: 1px solid var(--border);
+      border-radius: 0;
+      background: transparent;
+      color: var(--text);
+      padding: 20px 16px;
+      text-align: left;
+    }
+
+    .timer-preset:last-child {
+      border-bottom: 0;
+    }
+
+    .timer-preset:hover {
+      background: #303033;
+    }
+
+    .preset-duration {
+      font-size: 29px;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .preset-duration small {
+      margin-left: 3px;
+      color: #cccccf;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .preset-description {
+      color: #dddddf;
+      font-size: 14px;
+    }
+
+    .preset-chevron {
+      justify-self: end;
+      color: #85858a;
+      font-size: 28px;
+      font-weight: 300;
+    }
+
+    .timer-preset::after {
+      position: absolute;
+      bottom: 15px;
+      left: 17px;
+      width: var(--line-width, 48px);
+      height: 4px;
+      border-radius: 999px;
+      background: var(--accent);
+      content: "";
+    }
+
+    .sleepiness-box {
+      display: grid;
+      grid-template-columns: 140px minmax(0, 240px);
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .sleepiness-box label {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .active-timer {
+      padding: 44px 20px 28px;
+      text-align: center;
+    }
+
+    .timer-label {
+      margin: 0 0 10px;
+      font-size: 14px;
+    }
+
+    .timer-time {
+      margin: 0;
+      font-size: clamp(58px, 15vw, 94px);
+      font-weight: 650;
+      letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timer-actions {
+      justify-content: center;
+      margin-top: 22px;
+    }
+
+    .after-panel {
+      padding: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .after-panel .field {
+      max-width: 360px;
+      margin: 0 auto 16px;
+    }
+
+    .status-message {
+      margin-top: 16px;
+      padding: 13px 15px;
+      border: 1px solid #35576c;
+      border-radius: 10px;
+      background: #203544;
+      color: #e8f5ff;
+    }
+
+    .decision-panel {
+      padding: 28px 20px 22px;
+      text-align: center;
+    }
+
+    .decision-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .decision-text {
+      margin: 9px 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .extension-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 112px;
+      margin-bottom: 18px;
+      border: 1px solid #4a4a4e;
+      border-radius: 999px;
+      background: #232326;
+      padding: 7px 13px;
+      color: #dddddf;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .decision-actions {
+      display: grid;
+      width: min(430px, 100%);
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 0 auto;
+    }
+
+    .decision-actions button {
+      min-height: 48px;
+    }
+
+    .work-status {
+      display: inline-block;
+      margin-top: 6px;
+      border-radius: 999px;
+      background: #273643;
+      padding: 4px 9px;
+      color: #bfe2ff;
+      font-size: 12px;
+    }
+
+    .work-status.extended {
+      background: #3a3425;
+      color: #f0d99a;
+    }
+
+    .work-status.early {
+      background: #323235;
+      color: #c9c9cd;
+    }
+
+    /* 記録 */
+    .record-box {
+      padding: 20px;
+    }
+
+    .input-row input {
+      flex: 1;
+    }
+
+    .today-task {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: 16px;
+      padding: 16px;
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      background: #202b35;
+    }
+
+    .today-task.done {
+      border-left-color: var(--actual);
+      background: #20312e;
+    }
+
+    .week {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 7px;
+      padding: 0 20px 20px;
+    }
+
+    .day {
+      position: relative;
+      min-height: 68px;
+      padding: 10px 3px 13px;
+      border: 1px solid #3b3b3e;
+      border-radius: 9px;
+      background: #232325;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .day.done {
+      background: #2c3137;
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .day.done::after {
+      position: absolute;
+      right: 12px;
+      bottom: 6px;
+      left: 12px;
+      height: 3px;
+      border-radius: 99px;
+      background: var(--accent);
+      content: "";
+    }
+
+    ul {
+      margin: 0;
+      padding: 0 20px 10px;
+      list-style: none;
+    }
+
+    li {
+      padding: 13px 2px;
+      border-bottom: 1px solid var(--border);
+      line-height: 1.5;
+    }
+
+    li:last-child {
+      border-bottom: 0;
+    }
+
+    .history-date,
+    .history-detail {
+      margin-left: 7px;
+      font-size: 13px;
+    }
+
+    .history-detail {
+      display: block;
+      margin-top: 3px;
+      margin-left: 0;
+    }
+
+    .recovery-date {
+      display: block;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .recovery-detail {
+      display: block;
+      margin-top: 5px;
+      font-size: 18px;
+      line-height: 1.45;
+    }
+
+    /* 1日の管理 */
+    .schedule-padding {
+      padding: 20px;
+    }
+
+    .schedule-controls {
+      display: grid;
+      grid-template-columns: minmax(190px, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .schedule-form {
+      display: grid;
+      grid-template-columns: 110px minmax(180px, 1fr) 120px 120px auto;
+      gap: 10px;
+      align-items: end;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .day-view-wrap {
+      overflow-x: auto;
+      border-top: 1px solid var(--border);
+      background: #18181a;
+    }
+
+    .day-view {
+      display: grid;
+      grid-template-columns: 62px minmax(220px, 1fr) minmax(220px, 1fr);
+      min-width: 540px;
+    }
+
+    .day-view-header {
+      display: contents;
+    }
+
+    .day-view-header > div {
+      position: sticky;
+      top: 62px;
+      z-index: 5;
+      padding: 11px 8px;
+      border-bottom: 1px solid #444448;
+      background: #252527;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .time-header,
+    .plan-header {
+      border-right: 1px solid var(--border);
+    }
+
+    .time-axis,
+    .timeline-column {
+      position: relative;
+      height: 1152px;
+    }
+
+    .time-axis {
+      border-right: 1px solid var(--border);
+      background: #202022;
+    }
+
+    .timeline-column {
+      border-right: 1px solid var(--border);
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent 23px,
+          #2b2b2e 23px,
+          #2b2b2e 24px,
+          transparent 24px,
+          transparent 47px,
+          #3b3b3e 47px,
+          #3b3b3e 48px
+        );
+    }
+
+    .timeline-column:last-child {
+      border-right: 0;
+    }
+
+    .hour-label {
+      position: absolute;
+      right: 8px;
+      transform: translateY(-50%);
+      color: #8d8d92;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .schedule-event {
+      position: absolute;
+      right: 5px;
+      left: 5px;
+      z-index: 2;
+      min-height: 26px;
+      overflow: hidden;
+      border-left: 4px solid var(--accent);
+      border-radius: 7px;
+      background: var(--accent-soft);
+      color: #e8f4ff;
+      padding: 5px 27px 5px 8px;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .schedule-event.actual {
+      border-left-color: var(--actual);
+      background: #203b35;
+      color: #e2fff7;
+    }
+
+    .schedule-event-time {
+      display: block;
+      margin-bottom: 2px;
+      opacity: 0.78;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .schedule-event-title {
+      display: block;
+      overflow-wrap: anywhere;
+      font-weight: 650;
+    }
+
+    .schedule-event.compact {
+      display: flex;
+      min-height: 26px;
+      align-items: center;
+      gap: 7px;
+      padding-top: 3px;
+      padding-bottom: 3px;
+      white-space: nowrap;
+    }
+
+    .schedule-event.compact .schedule-event-time {
+      display: inline;
+      flex: 0 0 auto;
+      margin: 0;
+      font-size: 11px;
+    }
+
+    .schedule-event.compact .schedule-event-title {
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .schedule-event[style*="width"] {
+      padding-right: 24px;
+      font-size: 12px;
+    }
+
+    .schedule-delete {
+      position: absolute;
+      top: 2px;
+      right: 3px;
+      width: 24px;
+      height: 24px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      padding: 0;
+      color: inherit;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .schedule-delete:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .now-line {
+      position: absolute;
+      right: 0;
+      left: 0;
+      z-index: 3;
+      height: 2px;
+      background: var(--danger);
+      pointer-events: none;
+    }
+
+    .now-line::before {
+      position: absolute;
+      top: -4px;
+      left: -5px;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--danger);
+      content: "";
+    }
+
+    .schedule-empty {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      color: #77777c;
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+
+    body.timer-focus {
+      overflow: hidden;
+    }
+
+    .timer-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      min-height: 100vh;
+      flex-direction: column;
+      overflow-y: auto;
+      background: var(--bg);
+    }
+
+    .timer-overlay-header {
+      display: grid;
+      min-height: 62px;
+      flex: 0 0 auto;
+      grid-template-columns: 48px 1fr 48px;
+      align-items: center;
+      border-bottom: 1px solid #303033;
+      background: var(--bar);
+    }
+
+    .timer-overlay-header h2 {
+      margin: 0;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 650;
+    }
+
+    .timer-overlay-spacer {
+      width: 48px;
+      height: 48px;
+    }
+
+    .timer-overlay-close {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      justify-self: center;
+      border: 1px solid #3d3d40;
+      border-radius: 999px;
+      background: #1b1b1d;
+      color: var(--text);
+      padding: 0 0 2px;
+      font-size: 28px;
+      font-weight: 300;
+      line-height: 1;
+    }
+
+    .timer-overlay-content {
+      display: flex;
+      min-height: calc(100vh - 62px);
+      flex: 1 1 auto;
+      flex-direction: column;
+    }
+
+    .timer-overlay .active-timer {
+      display: flex;
+      min-height: 250px;
+      flex: 0 0 auto;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 44px 20px 30px;
+    }
+
+    .timer-overlay .timer-label {
+      margin: 0 0 12px;
+      font-size: 14px;
+    }
+
+    .timer-overlay .timer-time {
+      margin: 0;
+      font-size: clamp(58px, 10vw, 88px);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .timer-overlay-menu {
+      border-top: 1px solid var(--border);
+      background: var(--border);
+    }
+
+    .timer-menu-button {
+      display: block;
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid var(--border);
+      border-radius: 0;
+      background: var(--panel);
+      color: var(--text);
+      padding: 22px 20px;
+      text-align: center;
+      font-size: 15px;
+    }
+
+    .timer-menu-button:hover {
+      background: #303033;
+    }
+
+    .timer-overlay.paused .timer-time {
+      opacity: 0.55;
+    }
+
+    .timer-overlay.paused .timer-overlay-header h2 {
+      color: var(--muted);
+    }
+
+    .timer-state-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      min-height: 100vh;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+      margin: 0 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: var(--bg);
+      padding: 28px 20px !important;
+    }
+
+    .timer-state-overlay.decision-panel {
+      text-align: center;
+    }
+
+    .timer-state-overlay .decision-actions,
+    .timer-state-overlay .timer-actions {
+      width: min(440px, 100%);
+    }
+
+    .timer-state-overlay .field {
+      width: min(440px, 100%);
+    }
+
+    @media (max-width: 520px) {
+      .timer-overlay-header {
+        min-height: 58px;
+      }
+
+      .timer-overlay-content {
+        min-height: calc(100vh - 58px);
+      }
+
+      .timer-overlay .active-timer {
+        min-height: 220px;
+      }
+
+      .timer-menu-button {
+        padding: 20px 16px;
+      }
+    }
+
+
+    .schedule-event {
+      cursor: pointer;
+    }
+
+    .schedule-event:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    body.schedule-edit-open {
+      overflow: hidden;
+    }
+
+    .schedule-edit-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 130;
+      display: grid;
+      place-items: center;
+      overflow-y: auto;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(6px);
+    }
+
+    .schedule-edit-dialog {
+      width: min(620px, 100%);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    }
+
+    .schedule-edit-header {
+      display: grid;
+      min-height: 58px;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: var(--bar);
+    }
+
+    .schedule-edit-header h2 {
+      grid-column: 2;
+      margin: 0;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    .schedule-edit-close {
+      display: grid;
+      grid-column: 3;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      justify-self: center;
+      border: 1px solid #46464a;
+      border-radius: 999px;
+      background: #1b1b1d;
+      color: var(--text);
+      padding: 0 0 2px;
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .schedule-edit-body {
+      padding: 20px;
+    }
+
+    .schedule-edit-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .schedule-edit-title-field {
+      grid-column: 1 / -1;
+    }
+
+    .schedule-edit-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .danger-button {
+      border: 1px solid rgba(223, 107, 107, 0.55);
+      border-radius: 10px;
+      background: rgba(223, 107, 107, 0.14);
+      color: #ffb7b7;
+      padding: 12px 16px;
+    }
+
+    @media (max-width: 520px) {
+      .schedule-edit-overlay {
+        align-items: end;
+        padding: 8px;
+      }
+
+      .schedule-edit-dialog {
+        border-radius: 16px;
+      }
+
+      .schedule-edit-grid,
+      .schedule-edit-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .schedule-edit-title-field {
+        grid-column: auto;
+      }
+    }
+
+
+    .sync-status-button {
+      position: relative;
+      font-size: 18px;
+    }
+
+    .sync-status-button::after {
+      position: absolute;
+      right: 1px;
+      bottom: 1px;
+      width: 9px;
+      height: 9px;
+      border: 2px solid #1b1b1d;
+      border-radius: 999px;
+      background: #77777c;
+      content: "";
+    }
+
+    .sync-status-button[data-status="syncing"]::after {
+      background: #e2b85f;
+    }
+
+    .sync-status-button[data-status="synced"]::after {
+      background: var(--actual);
+    }
+
+    .sync-status-button[data-status="error"]::after {
+      background: var(--danger);
+    }
+
+    body.sync-dialog-open {
+      overflow: hidden;
+    }
+
+    .sync-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 150;
+      display: grid;
+      place-items: center;
+      overflow-y: auto;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.74);
+      backdrop-filter: blur(7px);
+    }
+
+    .sync-dialog {
+      width: min(520px, 100%);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: 0 20px 65px rgba(0, 0, 0, 0.48);
+    }
+
+    .sync-dialog-header {
+      display: grid;
+      min-height: 58px;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: var(--bar);
+    }
+
+    .sync-dialog-header h2 {
+      grid-column: 2;
+      margin: 0;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    .sync-dialog-close {
+      display: grid;
+      grid-column: 3;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      justify-self: center;
+      border: 1px solid #46464a;
+      border-radius: 999px;
+      background: #1b1b1d;
+      color: var(--text);
+      padding: 0 0 2px;
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .sync-dialog-body {
+      display: grid;
+      gap: 15px;
+      padding: 20px;
+    }
+
+    .sync-fields {
+      display: grid;
+      gap: 13px;
+    }
+
+    .sync-actions {
+      display: grid;
+      gap: 10px;
+    }
+
+    .sync-account {
+      margin: 0;
+      padding: 13px 14px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: var(--panel-2);
+      overflow-wrap: anywhere;
+    }
+
+    .sync-state-text {
+      min-height: 22px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .sync-state-text.error {
+      color: #ffb2b2;
+    }
+
+    @media (max-width: 520px) {
+      .sync-overlay {
+        align-items: end;
+        padding: 8px;
+      }
+    }
+
+    /* 下部ナビ */
+    .app-tabs {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      z-index: 50;
+      display: grid;
+      width: min(390px, calc(100% - 28px));
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      padding: 5px;
+      border: 1px solid #3e3e41;
+      border-radius: 24px;
+      background: rgba(28, 28, 30, 0.96);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.42);
+      backdrop-filter: blur(16px);
+      transform: translateX(-50%);
+    }
+
+    .tab-button {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      border: 0;
+      border-radius: 18px;
+      background: transparent;
+      color: #c8c8cc;
+      padding: 7px 4px 6px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .tab-button:hover {
+      background: #29292c;
+    }
+
+    .nav-icon-wrap {
+      display: grid;
+      width: 34px;
+      height: 26px;
+      place-items: center;
+      border-radius: 13px;
+      color: #d7d7db;
+    }
+
+    .nav-icon-wrap svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.8;
+    }
+
+    .tab-button[aria-selected="true"] {
+      color: var(--accent);
+    }
+
+    .tab-button[aria-selected="true"] .nav-icon-wrap {
+      background: #3a3a3f;
+      color: var(--accent);
+    }
+
+    .tab-label {
+      overflow: hidden;
+      max-width: 100%;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 760px) {
+      main {
+        padding-right: 10px;
+        padding-left: 10px;
+      }
+
+      .schedule-form {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .schedule-form .title-field {
+        grid-column: 1 / -1;
+      }
+
+      .schedule-form button {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .app-header {
+        min-height: 58px;
+      }
+
+      .custom-row,
+      .schedule-controls,
+      .schedule-form {
+        grid-template-columns: 1fr;
+      }
+
+      .input-row {
+        flex-direction: column;
+      }
+
+      .input-row button,
+      .today-task button {
+        width: 100%;
+      }
+
+      .today-task {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .week {
+        gap: 4px;
+        padding-right: 12px;
+        padding-left: 12px;
+      }
+
+      .day {
+        min-height: 62px;
+        padding-right: 1px;
+        padding-left: 1px;
+        font-size: 11px;
+      }
+
+      .schedule-form .title-field,
+      .schedule-form button {
+        grid-column: auto;
+      }
+
+      .date-nav button {
+        flex: 1;
+      }
+
+      .sleepiness-box {
+        grid-template-columns: 1fr;
+      }
+
+      .timer-preset {
+        grid-template-columns: 92px 1fr 20px;
+        padding-right: 13px;
+        padding-left: 13px;
+      }
+
+      .preset-duration {
+        font-size: 24px;
+      }
+
+      .decision-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .app-tabs {
+        bottom: 8px;
+        width: calc(100% - 16px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <button id="syncStatusButton" class="header-action sync-status-button"
+      type="button" data-status="offline" aria-label="同期設定を開く"
+      title="この端末だけに保存">☁</button>
+    <h1 id="screenTitle">タイマーをセットする</h1>
+    <button id="customToggleButton" class="header-action" type="button"
+      aria-label="カスタムタイマーを開く">＋</button>
+  </header>
+
+  <div id="syncOverlay" class="sync-overlay" hidden>
+    <section class="sync-dialog" role="dialog" aria-modal="true"
+      aria-labelledby="syncDialogHeading">
+      <header class="sync-dialog-header">
+        <h2 id="syncDialogHeading">端末間同期</h2>
+        <button id="closeSyncButton" class="sync-dialog-close" type="button"
+          aria-label="同期画面を閉じる">×</button>
+      </header>
+
+      <div class="sync-dialog-body">
+        <p id="syncStateText" class="sync-state-text">
+          ログインすると、計画や記録をほかの端末と共有できます。
+        </p>
+
+        <div id="signedOutSyncPanel">
+          <div class="sync-fields">
+            <div class="field">
+              <label for="syncEmail">メールアドレス</label>
+              <input id="syncEmail" type="email" autocomplete="username"
+                placeholder="Supabaseで作成したメールアドレス" />
+            </div>
+
+            <div class="field">
+              <label for="syncPassword">パスワード</label>
+              <input id="syncPassword" type="password"
+                autocomplete="current-password" />
+            </div>
+          </div>
+
+          <div class="sync-actions" style="margin-top: 15px">
+            <button id="signInSyncButton" class="primary" type="button">
+              ログインして同期
+            </button>
+          </div>
+        </div>
+
+        <div id="signedInSyncPanel" hidden>
+          <p id="syncAccount" class="sync-account"></p>
+
+          <div class="sync-actions" style="margin-top: 15px">
+            <button id="refreshFromCloudButton" class="primary" type="button">
+              クラウドから最新状態を読み込む
+            </button>
+            <button id="saveToCloudButton" class="secondary" type="button">
+              この端末の状態をクラウドへ保存
+            </button>
+            <button id="signOutSyncButton" class="secondary" type="button">
+              ログアウト
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <main>
+    <section class="tab-panel" data-tab-panel="timer">
+      <div class="mode-switch" role="tablist" aria-label="タイマーの種類">
+        <button class="mode-button" type="button" role="tab"
+          data-mode-target="work" aria-selected="true">作業</button>
+        <button class="mode-button" type="button" role="tab"
+          data-mode-target="rest" aria-selected="false">休憩</button>
+      </div>
+
+      <div id="customTimerPanel" class="custom-panel" hidden>
+        <div class="custom-row">
+          <div class="field">
+            <label for="customMinutes">時間（分）</label>
+            <input id="customMinutes" type="number" min="1" max="240" value="30" />
+          </div>
+          <button id="startCustomTimerButton" class="primary" type="button">
+            この時間で開始
+          </button>
+        </div>
+      </div>
+
+      <div id="timerSetup">
+        <div id="workModePanel" class="mode-panel" data-mode-panel="work">
+          <div class="timer-list">
+            <button class="timer-preset" type="button" data-minutes="10"
+              data-label="まずは始める" style="--line-width: 20px">
+              <span class="preset-duration">10<small>min</small></span>
+              <span class="preset-description">まずは始める</span>
+              <span class="preset-chevron" aria-hidden="true">›</span>
+            </button>
+            <button class="timer-preset" type="button" data-minutes="25"
+              data-label="短く集中" style="--line-width: 50px">
+              <span class="preset-duration">25<small>min</small></span>
+              <span class="preset-description">短く集中</span>
+              <span class="preset-chevron" aria-hidden="true">›</span>
+            </button>
+            <button class="timer-preset" type="button" data-minutes="60"
+              data-label="しっかり取り組む" style="--line-width: 118px">
+              <span class="preset-duration">60<small>min</small></span>
+              <span class="preset-description">しっかり取り組む</span>
+              <span class="preset-chevron" aria-hidden="true">›</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="restModePanel" class="mode-panel" data-mode-panel="rest" hidden>
+          <div class="sleepiness-box">
+            <label for="beforeSleepiness">今の眠気</label>
+            <select id="beforeSleepiness">
+              <option value="">選ぶ</option>
+              <option value="1">1：ほぼ眠くない</option>
+              <option value="2">2：少し眠い</option>
+              <option value="3">3：眠い</option>
+              <option value="4">4：かなり眠い</option>
+              <option value="5">5：限界に近い</option>
+            </select>
+          </div>
+
+          <div class="timer-list">
+            <button class="timer-preset" type="button" data-minutes="5"
+              data-label="少し目を閉じる" style="--line-width: 14px">
+              <span class="preset-duration">5<small>min</small></span>
+              <span class="preset-description">少し目を閉じる</span>
+              <span class="preset-chevron" aria-hidden="true">›</span>
+            </button>
+            <button class="timer-preset" type="button" data-minutes="10"
+              data-label="短く休む" style="--line-width: 28px">
+              <span class="preset-duration">10<small>min</small></span>
+              <span class="preset-description">短く休む</span>
+              <span class="preset-chevron" aria-hidden="true">›</span>
+            </button>
+            <button class="timer-preset" type="button" data-minutes="20"
+              data-label="少し長めに休む" style="--line-width: 56px">
+              <span class="preset-duration">20<small>min</small></span>
+              <span class="preset-description">少し長めに休む</span>
+              <span class="preset-chevron" aria-hidden="true">›</span>
+            </button>
+          </div>
+
+          <section class="section">
+            <div class="section-heading">
+              <h2>回復の記録</h2>
+            </div>
+            <ul id="recoveryHistoryList"></ul>
+          </section>
+        </div>
+      </div>
+
+      <section id="activeTimerPanel" class="timer-overlay" hidden>
+        <header class="timer-overlay-header">
+          <span class="timer-overlay-spacer" aria-hidden="true"></span>
+          <h2 id="timerOverlayTitle">集中する</h2>
+          <button id="timerOverlayCloseButton" class="timer-overlay-close"
+            type="button" aria-label="タイマーを取り消して閉じる">×</button>
+        </header>
+
+        <div class="timer-overlay-content">
+          <div class="active-timer">
+            <p id="timerTime" class="timer-time">00:00</p>
+          </div>
+
+          <div class="timer-overlay-menu">
+            <button id="finishTimerButton" class="timer-menu-button" type="button">
+              終了
+            </button>
+            <button id="pauseTimerButton" class="timer-menu-button" type="button">
+              一時停止
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="timerDecisionPanel" class="section decision-panel timer-state-overlay" hidden>
+        <p class="decision-title">予定時間が終わりました</p>
+        <p class="decision-text">
+          ここで区切るか、必要な場合だけ5分延長します。
+        </p>
+        <div id="extensionCount" class="extension-count">延長 0 / 2回</div>
+        <div class="decision-actions">
+          <button id="stopOnTimeButton" class="primary" type="button">
+            ここで終了
+          </button>
+          <button id="extendFiveMinutesButton" class="secondary" type="button">
+            5分だけ延長
+          </button>
+        </div>
+      </section>
+
+      <section id="afterRestPanel" class="section after-panel timer-state-overlay" hidden>
+        <div class="field">
+          <label for="afterSleepiness">休んだ後の眠気</label>
+          <select id="afterSleepiness">
+            <option value="">選ぶ</option>
+            <option value="1">1：ほぼ眠くない</option>
+            <option value="2">2：少し眠い</option>
+            <option value="3">3：眠い</option>
+            <option value="4">4：かなり眠い</option>
+            <option value="5">5：限界に近い</option>
+          </select>
+        </div>
+        <div class="timer-actions">
+          <button id="saveRecoveryButton" class="primary" type="button">
+            回復記録を残す
+          </button>
+          <button id="cancelRecoveryButton" class="secondary" type="button">
+            記録せず戻る
+          </button>
+        </div>
+        <p class="helper">保存を押すまでは記録されません。</p>
+      </section>
+
+      <div id="timerMessage" class="status-message" hidden></div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="schedule" hidden>
+      <section class="section">
+        <div class="section-heading">
+          <h2>計画と実際</h2>
+          <p class="helper">24時間を縦に見て、計画と実際を横に並べる。</p>
+        </div>
+
+        <div class="schedule-padding">
+          <div class="schedule-controls">
+            <div class="field">
+              <label for="scheduleDate">表示する日</label>
+              <input id="scheduleDate" type="date" />
+            </div>
+            <div class="date-nav">
+              <button id="previousDayButton" class="secondary" type="button">前日</button>
+              <button id="todayScheduleButton" class="secondary" type="button">今日</button>
+              <button id="nextDayButton" class="secondary" type="button">翌日</button>
+            </div>
+          </div>
+
+          <div class="schedule-form">
+            <div class="field">
+              <label for="scheduleKind">種類</label>
+              <select id="scheduleKind">
+                <option value="plan">計画</option>
+                <option value="actual">実際</option>
+              </select>
+            </div>
+            <div class="field title-field">
+              <label for="scheduleTitle">内容</label>
+              <input id="scheduleTitle" type="text" placeholder="例：アプリ作り" />
+            </div>
+            <div class="field">
+              <label for="scheduleStart">開始（5分刻み）</label>
+              <select id="scheduleStart"></select>
+            </div>
+            <div class="field">
+              <label for="scheduleDuration">何分やる？</label>
+              <select id="scheduleDuration"></select>
+            </div>
+            <button id="addScheduleButton" class="primary" type="button">追加</button>
+          </div>
+        </div>
+
+        <div class="day-view-wrap">
+          <div class="day-view">
+            <div class="day-view-header">
+              <div class="time-header">時間</div>
+              <div class="plan-header">計画</div>
+              <div>実際</div>
+            </div>
+            <div id="timeAxis" class="time-axis"></div>
+            <div id="planTimeline" class="timeline-column"></div>
+            <div id="actualTimeline" class="timeline-column"></div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <div id="scheduleEditOverlay" class="schedule-edit-overlay" hidden>
+      <section class="schedule-edit-dialog" role="dialog" aria-modal="true"
+        aria-labelledby="scheduleEditHeading">
+        <header class="schedule-edit-header">
+          <h2 id="scheduleEditHeading">予定・実績を編集</h2>
+          <button id="closeScheduleEditButton" class="schedule-edit-close"
+            type="button" aria-label="編集を閉じる">×</button>
+        </header>
+
+        <div class="schedule-edit-body">
+          <div class="schedule-edit-grid">
+            <div class="field">
+              <label for="editScheduleKind">種類</label>
+              <select id="editScheduleKind">
+                <option value="plan">計画</option>
+                <option value="actual">実際</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="editScheduleDate">日付</label>
+              <input id="editScheduleDate" type="date" />
+            </div>
+
+            <div class="field schedule-edit-title-field">
+              <label for="editScheduleTitle">内容</label>
+              <input id="editScheduleTitle" type="text" />
+            </div>
+
+            <div class="field">
+              <label for="editScheduleStart">開始</label>
+              <select id="editScheduleStart"></select>
+            </div>
+
+            <div class="field">
+              <label for="editScheduleDuration">長さ</label>
+              <select id="editScheduleDuration"></select>
+            </div>
+          </div>
+
+          <div class="schedule-edit-actions">
+            <button id="saveScheduleEditButton" class="primary" type="button">
+              保存
+            </button>
+            <button id="deleteScheduleEditButton" class="danger-button"
+              type="button">削除</button>
+            <button id="cancelScheduleEditButton" class="secondary"
+              type="button">キャンセル</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="tab-panel" data-tab-panel="records" hidden>
+      <section class="section">
+        <div class="section-heading">
+          <h2>今日積み重ねること</h2>
+        </div>
+        <div class="record-box">
+          <div class="input-row">
+            <input id="taskInput" type="text" placeholder="例：SPIを3問解く" />
+            <button id="saveTaskButton" class="primary" type="button">決める</button>
+          </div>
+          <div id="todayArea"></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <h2>過去7日</h2>
+        </div>
+        <div id="weekArea" class="week"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <h2>積み重ねの記録</h2>
+        </div>
+        <ul id="historyList"></ul>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <h2>作業の記録</h2>
+        </div>
+        <ul id="workHistoryList"></ul>
+      </section>
+    </section>
+  </main>
+
+  <nav class="app-tabs" role="tablist" aria-label="画面の切り替え">
+    <button class="tab-button" type="button" role="tab"
+      data-tab-target="timer" aria-selected="true">
+      <span class="nav-icon-wrap">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="13" r="7.5"></circle>
+          <path d="M12 2.5v3"></path>
+          <path d="M9.5 2.5h5"></path>
+          <path d="M12 13l3-2"></path>
+        </svg>
+      </span>
+      <span class="tab-label">タイマー</span>
+    </button>
+
+    <button class="tab-button" type="button" role="tab"
+      data-tab-target="schedule" aria-selected="false">
+      <span class="nav-icon-wrap">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 19V10"></path>
+          <path d="M10 19V5"></path>
+          <path d="M15 19v-7"></path>
+          <path d="M20 19V8"></path>
+          <path d="M3.5 19.5h18"></path>
+        </svg>
+      </span>
+      <span class="tab-label">1日の管理</span>
+    </button>
+
+    <button class="tab-button" type="button" role="tab"
+      data-tab-target="records" aria-selected="false">
+      <span class="nav-icon-wrap">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 4h10"></path>
+          <path d="M7 8h10"></path>
+          <path d="M7 12h7"></path>
+          <path d="M5 3v17h14V3z"></path>
+        </svg>
+      </span>
+      <span class="tab-label">記録</span>
+    </button>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const TASK_STORAGE_KEY = "tsumikasane-records-v1";
+    const RECOVERY_STORAGE_KEY = "tsumikasane-recovery-v1";
+    const WORK_STORAGE_KEY = "tsumikasane-work-v1";
+    const SCHEDULE_STORAGE_KEY = "tsumikasane-schedule-v1";
+    const ACTIVE_TAB_STORAGE_KEY = "tsumikasane-active-tab-v2";
+    const LOCAL_UPDATED_AT_KEY = "tsumikasane-local-updated-at-v1";
+
+    const SUPABASE_URL = "https://rpqtdcroxxffjygunaui.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY =
+      "sb_publishable_xPFkIrC2ouvoi5g5JMvQWw_gCXJOU9n";
+
+    const CLOUD_STORAGE_KEYS = [
+      TASK_STORAGE_KEY,
+      RECOVERY_STORAGE_KEY,
+      WORK_STORAGE_KEY,
+      SCHEDULE_STORAGE_KEY
+    ];
+
+    const screenTitle = document.getElementById("screenTitle");
+    const syncStatusButton =
+      document.getElementById("syncStatusButton");
+    const syncOverlay =
+      document.getElementById("syncOverlay");
+    const closeSyncButton =
+      document.getElementById("closeSyncButton");
+    const syncStateText =
+      document.getElementById("syncStateText");
+    const signedOutSyncPanel =
+      document.getElementById("signedOutSyncPanel");
+    const signedInSyncPanel =
+      document.getElementById("signedInSyncPanel");
+    const syncEmail =
+      document.getElementById("syncEmail");
+    const syncPassword =
+      document.getElementById("syncPassword");
+    const signInSyncButton =
+      document.getElementById("signInSyncButton");
+    const syncAccount =
+      document.getElementById("syncAccount");
+    const refreshFromCloudButton =
+      document.getElementById("refreshFromCloudButton");
+    const saveToCloudButton =
+      document.getElementById("saveToCloudButton");
+    const signOutSyncButton =
+      document.getElementById("signOutSyncButton");
+
+    const customToggleButton = document.getElementById("customToggleButton");
+    const customTimerPanel = document.getElementById("customTimerPanel");
+    const customMinutes = document.getElementById("customMinutes");
+    const startCustomTimerButton = document.getElementById("startCustomTimerButton");
+
+    const tabButtons = [...document.querySelectorAll("[data-tab-target]")];
+    const tabPanels = [...document.querySelectorAll("[data-tab-panel]")];
+    const modeButtons = [...document.querySelectorAll("[data-mode-target]")];
+    const modePanels = [...document.querySelectorAll("[data-mode-panel]")];
+    const presetButtons = [...document.querySelectorAll(".timer-preset")];
+
+    const timerSetup = document.getElementById("timerSetup");
+    const activeTimerPanel = document.getElementById("activeTimerPanel");
+    const timerOverlayTitle = document.getElementById("timerOverlayTitle");
+    const timerOverlayCloseButton =
+      document.getElementById("timerOverlayCloseButton");
+    const afterRestPanel = document.getElementById("afterRestPanel");
+    const timerTime = document.getElementById("timerTime");
+    const finishTimerButton = document.getElementById("finishTimerButton");
+    const pauseTimerButton = document.getElementById("pauseTimerButton");
+    const timerDecisionPanel = document.getElementById("timerDecisionPanel");
+    const extensionCount = document.getElementById("extensionCount");
+    const stopOnTimeButton = document.getElementById("stopOnTimeButton");
+    const extendFiveMinutesButton = document.getElementById("extendFiveMinutesButton");
+    const beforeSleepiness = document.getElementById("beforeSleepiness");
+    const afterSleepiness = document.getElementById("afterSleepiness");
+    const saveRecoveryButton = document.getElementById("saveRecoveryButton");
+    const cancelRecoveryButton = document.getElementById("cancelRecoveryButton");
+    const timerMessage = document.getElementById("timerMessage");
+    const recoveryHistoryList = document.getElementById("recoveryHistoryList");
+
+    const scheduleDate = document.getElementById("scheduleDate");
+    const previousDayButton = document.getElementById("previousDayButton");
+    const todayScheduleButton = document.getElementById("todayScheduleButton");
+    const nextDayButton = document.getElementById("nextDayButton");
+    const scheduleKind = document.getElementById("scheduleKind");
+    const scheduleTitle = document.getElementById("scheduleTitle");
+    const scheduleStart = document.getElementById("scheduleStart");
+    const scheduleDuration = document.getElementById("scheduleDuration");
+    const addScheduleButton = document.getElementById("addScheduleButton");
+    const timeAxis = document.getElementById("timeAxis");
+    const planTimeline = document.getElementById("planTimeline");
+    const actualTimeline = document.getElementById("actualTimeline");
+
+    const scheduleEditOverlay =
+      document.getElementById("scheduleEditOverlay");
+    const scheduleEditHeading =
+      document.getElementById("scheduleEditHeading");
+    const closeScheduleEditButton =
+      document.getElementById("closeScheduleEditButton");
+    const editScheduleKind =
+      document.getElementById("editScheduleKind");
+    const editScheduleDate =
+      document.getElementById("editScheduleDate");
+    const editScheduleTitle =
+      document.getElementById("editScheduleTitle");
+    const editScheduleStart =
+      document.getElementById("editScheduleStart");
+    const editScheduleDuration =
+      document.getElementById("editScheduleDuration");
+    const saveScheduleEditButton =
+      document.getElementById("saveScheduleEditButton");
+    const deleteScheduleEditButton =
+      document.getElementById("deleteScheduleEditButton");
+    const cancelScheduleEditButton =
+      document.getElementById("cancelScheduleEditButton");
+
+    const taskInput = document.getElementById("taskInput");
+    const saveTaskButton = document.getElementById("saveTaskButton");
+    const todayArea = document.getElementById("todayArea");
+    const weekArea = document.getElementById("weekArea");
+    const historyList = document.getElementById("historyList");
+    const workHistoryList = document.getElementById("workHistoryList");
+
+    let activeTab = "timer";
+    let activeMode = "work";
+    let timerInterval = null;
+    let activeTimer = null;
+    let editingScheduleId = null;
+
+    let supabaseClient = null;
+    let currentSyncUser = null;
+    let cloudSyncTimer = null;
+    let applyingCloudState = false;
+    let activeUserSetupPromise = null;
+
+    function getDateKey(date = new Date()) {
+      return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getDate()).padStart(2, "0")
+      ].join("-");
+    }
+
+    function loadArray(key) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key));
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveArray(key, records) {
+      try {
+        localStorage.setItem(key, JSON.stringify(records));
+        localStorage.setItem(
+          LOCAL_UPDATED_AT_KEY,
+          new Date().toISOString()
+        );
+        scheduleCloudSync();
+      } catch {
+        alert("ブラウザに記録を保存できませんでした。");
+      }
+    }
+
+    function setSyncState(status, message = "") {
+      syncStatusButton.dataset.status = status;
+
+      const titles = {
+        offline: "この端末だけに保存",
+        syncing: "同期中",
+        synced: "クラウドと同期済み",
+        error: "同期エラー"
+      };
+
+      syncStatusButton.title = titles[status] || titles.offline;
+      syncStatusButton.setAttribute(
+        "aria-label",
+        `${syncStatusButton.title}。同期設定を開く`
+      );
+
+      syncStateText.textContent = message || syncStatusButton.title;
+      syncStateText.classList.toggle("error", status === "error");
+    }
+
+    function showSyncPanels(isSignedIn) {
+      signedOutSyncPanel.hidden = isSignedIn;
+      signedInSyncPanel.hidden = !isSignedIn;
+
+      if (isSignedIn && currentSyncUser) {
+        syncAccount.textContent =
+          `ログイン中：${currentSyncUser.email || "ユーザー"}`;
+      } else {
+        syncAccount.textContent = "";
+      }
+    }
+
+    function openSyncDialog() {
+      syncOverlay.hidden = false;
+      document.body.classList.add("sync-dialog-open");
+      showSyncPanels(Boolean(currentSyncUser));
+
+      if (!currentSyncUser) {
+        syncEmail.focus();
+      }
+    }
+
+    function closeSyncDialog() {
+      syncOverlay.hidden = true;
+      document.body.classList.remove("sync-dialog-open");
+    }
+
+    function collectLocalState() {
+      const data = {
+        version: 1,
+        saved_at: new Date().toISOString()
+      };
+
+      for (const key of CLOUD_STORAGE_KEYS) {
+        data[key] = loadArray(key);
+      }
+
+      return data;
+    }
+
+    function renderAllStoredData() {
+      renderRecoveryHistory();
+      renderSchedule();
+      renderTaskRecords();
+      renderWorkHistory();
+    }
+
+    function applyCloudState(cloudData) {
+      if (!cloudData || typeof cloudData !== "object") return;
+
+      applyingCloudState = true;
+
+      try {
+        for (const key of CLOUD_STORAGE_KEYS) {
+          const records = cloudData[key];
+
+          if (Array.isArray(records)) {
+            localStorage.setItem(key, JSON.stringify(records));
+          }
+        }
+
+        localStorage.setItem(
+          LOCAL_UPDATED_AT_KEY,
+          cloudData.saved_at || new Date().toISOString()
+        );
+      } finally {
+        applyingCloudState = false;
+      }
+
+      renderAllStoredData();
+    }
+
+    function scheduleCloudSync() {
+      if (
+        !currentSyncUser ||
+        !supabaseClient ||
+        applyingCloudState
+      ) {
+        return;
+      }
+
+      clearTimeout(cloudSyncTimer);
+      setSyncState("syncing", "変更をクラウドへ保存しています…");
+
+      cloudSyncTimer = setTimeout(() => {
+        pushLocalStateToCloud();
+      }, 700);
+    }
+
+    async function pushLocalStateToCloud() {
+      if (!currentSyncUser || !supabaseClient) return false;
+
+      clearTimeout(cloudSyncTimer);
+      cloudSyncTimer = null;
+      setSyncState("syncing", "クラウドへ保存しています…");
+
+      const snapshot = collectLocalState();
+      const { error } = await supabaseClient
+        .from("app_state")
+        .upsert(
+          {
+            user_id: currentSyncUser.id,
+            data: snapshot,
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: "user_id" }
+        );
+
+      if (error) {
+        console.error(error);
+        setSyncState(
+          "error",
+          `保存できませんでした：${error.message}`
+        );
+        return false;
+      }
+
+      setSyncState("synced", "クラウドと同期しました。");
+      return true;
+    }
+
+    async function pullCloudState({ createWhenMissing = true } = {}) {
+      if (!currentSyncUser || !supabaseClient) return false;
+
+      setSyncState("syncing", "クラウドから読み込んでいます…");
+
+      const { data, error } = await supabaseClient
+        .from("app_state")
+        .select("data, updated_at")
+        .eq("user_id", currentSyncUser.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error(error);
+        setSyncState(
+          "error",
+          `読み込めませんでした：${error.message}`
+        );
+        return false;
+      }
+
+      if (!data) {
+        if (createWhenMissing) {
+          return pushLocalStateToCloud();
+        }
+
+        setSyncState("synced", "クラウドに記録はまだありません。");
+        return true;
+      }
+
+      applyCloudState(data.data);
+      setSyncState("synced", "クラウドの最新状態を読み込みました。");
+      return true;
+    }
+
+    async function handleSignedIn(user) {
+      if (!user) return;
+
+      if (
+        currentSyncUser?.id === user.id &&
+        activeUserSetupPromise
+      ) {
+        return activeUserSetupPromise;
+      }
+
+      currentSyncUser = user;
+      showSyncPanels(true);
+
+      activeUserSetupPromise = pullCloudState({
+        createWhenMissing: true
+      });
+
+      const result = await activeUserSetupPromise;
+      activeUserSetupPromise = null;
+      return result;
+    }
+
+    function handleSignedOut() {
+      currentSyncUser = null;
+      activeUserSetupPromise = null;
+      clearTimeout(cloudSyncTimer);
+      cloudSyncTimer = null;
+      showSyncPanels(false);
+      setSyncState(
+        "offline",
+        "ログインすると、計画や記録をほかの端末と共有できます。"
+      );
+    }
+
+    async function signInForSync() {
+      if (!supabaseClient) {
+        setSyncState(
+          "error",
+          "Supabaseを読み込めませんでした。インターネット接続を確認してください。"
+        );
+        return;
+      }
+
+      const email = syncEmail.value.trim();
+      const password = syncPassword.value;
+
+      if (!email || !password) {
+        setSyncState(
+          "error",
+          "メールアドレスとパスワードを入力してください。"
+        );
+        return;
+      }
+
+      signInSyncButton.disabled = true;
+      setSyncState("syncing", "ログインしています…");
+
+      const { data, error } =
+        await supabaseClient.auth.signInWithPassword({
+          email,
+          password
+        });
+
+      signInSyncButton.disabled = false;
+
+      if (error) {
+        console.error(error);
+        setSyncState(
+          "error",
+          "ログインできませんでした。メールアドレスとパスワードを確認してください。"
+        );
+        return;
+      }
+
+      syncPassword.value = "";
+      await handleSignedIn(data.user);
+      closeSyncDialog();
+    }
+
+    async function signOutFromSync() {
+      if (!supabaseClient) return;
+
+      setSyncState("syncing", "ログアウトしています…");
+      const { error } = await supabaseClient.auth.signOut();
+
+      if (error) {
+        setSyncState(
+          "error",
+          `ログアウトできませんでした：${error.message}`
+        );
+        return;
+      }
+
+      handleSignedOut();
+    }
+
+    async function initializeCloudSync() {
+      if (!window.supabase?.createClient) {
+        setSyncState(
+          "error",
+          "Supabaseを読み込めませんでした。インターネット接続を確認してください。"
+        );
+        return;
+      }
+
+      supabaseClient = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_PUBLISHABLE_KEY
+      );
+
+      supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_OUT" || !session?.user) {
+          handleSignedOut();
+          return;
+        }
+
+        if (
+          event === "SIGNED_IN" &&
+          currentSyncUser?.id !== session.user.id
+        ) {
+          handleSignedIn(session.user);
+        }
+      });
+
+      const {
+        data: { session },
+        error
+      } = await supabaseClient.auth.getSession();
+
+      if (error) {
+        console.error(error);
+        setSyncState(
+          "error",
+          `ログイン状態を確認できませんでした：${error.message}`
+        );
+        return;
+      }
+
+      if (session?.user) {
+        await handleSignedIn(session.user);
+      } else {
+        handleSignedOut();
+      }
+    }
+
+    function formatDate(dateKey) {
+      const date = new Date(dateKey + "T00:00:00");
+      return new Intl.DateTimeFormat("ja-JP", {
+        month: "numeric",
+        day: "numeric",
+        weekday: "short"
+      }).format(date);
+    }
+
+    function formatDateTime(isoString) {
+      const date = new Date(isoString);
+      return new Intl.DateTimeFormat("ja-JP", {
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(date);
+    }
+
+    function normalizeStoredTab(value) {
+      if (value === "today") return "records";
+      if (value === "recovery") return "timer";
+      if (["timer", "schedule", "records"].includes(value)) return value;
+      return "timer";
+    }
+
+    function showTab(tabName) {
+      const selectedTab = normalizeStoredTab(tabName);
+      activeTab = selectedTab;
+
+      for (const button of tabButtons) {
+        button.setAttribute(
+          "aria-selected",
+          String(button.dataset.tabTarget === selectedTab)
+        );
+      }
+
+      for (const panel of tabPanels) {
+        panel.hidden = panel.dataset.tabPanel !== selectedTab;
+      }
+
+      const titles = {
+        timer: "タイマーをセットする",
+        schedule: "1日の管理",
+        records: "今日・記録"
+      };
+      screenTitle.textContent = titles[selectedTab];
+      customToggleButton.hidden = selectedTab !== "timer";
+
+      try {
+        localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, selectedTab);
+      } catch {
+        // 保存できなくても画面切り替えは続ける。
+      }
+    }
+
+    function showMode(modeName) {
+      activeMode = modeName;
+
+      for (const button of modeButtons) {
+        button.setAttribute(
+          "aria-selected",
+          String(button.dataset.modeTarget === modeName)
+        );
+      }
+
+      for (const panel of modePanels) {
+        panel.hidden = panel.dataset.modePanel !== modeName;
+      }
+
+      customTimerPanel.hidden = true;
+      timerMessage.hidden = true;
+    }
+
+    function resetTimerScreen(message = "") {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+
+      activeTimer = null;
+      document.body.classList.remove("timer-focus");
+      activeTimerPanel.classList.remove("paused");
+      pauseTimerButton.textContent = "一時停止";
+      timerSetup.hidden = false;
+      activeTimerPanel.hidden = true;
+      timerDecisionPanel.hidden = true;
+      afterRestPanel.hidden = true;
+      customTimerPanel.hidden = true;
+      timerTime.textContent = "00:00";
+      afterSleepiness.value = "";
+
+      if (message) {
+        timerMessage.textContent = message;
+        timerMessage.hidden = false;
+      } else {
+        timerMessage.hidden = true;
+      }
+    }
+
+    function startTimer(minutes, label) {
+      const numericMinutes = Number(minutes);
+
+      if (!Number.isFinite(numericMinutes) || numericMinutes < 1) {
+        alert("1分以上の時間を入力してください。");
+        return;
+      }
+
+      let before = null;
+      if (activeMode === "rest") {
+        before = Number(beforeSleepiness.value);
+        if (!before) {
+          alert("今の眠気を選んでください。");
+          return;
+        }
+      }
+
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+
+      const startedAt = new Date();
+      activeTimer = {
+        mode: activeMode,
+        plannedMinutes: numericMinutes,
+        initialPlannedMinutes: numericMinutes,
+        extensionCount: 0,
+        label,
+        before,
+        startedAt: startedAt.toISOString(),
+        endTime: startedAt.getTime() + numericMinutes * 60 * 1000,
+        isPaused: false,
+        pausedAt: null,
+        segments: [{
+          startedAt: startedAt.toISOString(),
+          finishedAt: null
+        }]
+      };
+
+      document.body.classList.add("timer-focus");
+      timerOverlayTitle.textContent =
+        activeMode === "work" ? "集中する" : "休憩する";
+
+      timerSetup.hidden = true;
+      customTimerPanel.hidden = true;
+      afterRestPanel.hidden = true;
+      timerDecisionPanel.hidden = true;
+      timerMessage.hidden = true;
+      activeTimerPanel.hidden = false;
+
+      activeTimerPanel.classList.remove("paused");
+      pauseTimerButton.textContent = "一時停止";
+      updateTimerDisplay();
+
+      timerInterval = setInterval(() => {
+        updateTimerDisplay();
+
+        if (activeTimer && Date.now() >= activeTimer.endTime) {
+          handleTimerExpired();
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      if (!activeTimer) return;
+
+      const remainingMs = Math.max(0, activeTimer.endTime - Date.now());
+      const totalSeconds = Math.ceil(remainingMs / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+
+      timerTime.textContent =
+        String(minutes).padStart(2, "0") +
+        ":" +
+        String(seconds).padStart(2, "0");
+    }
+
+    function closeCurrentTimerSegment(finishedAt = new Date()) {
+      if (!activeTimer || !Array.isArray(activeTimer.segments)) return;
+
+      const current = activeTimer.segments[activeTimer.segments.length - 1];
+      if (current && !current.finishedAt) {
+        current.finishedAt = finishedAt.toISOString();
+      }
+    }
+
+    function calculateActiveMilliseconds() {
+      if (!activeTimer || !Array.isArray(activeTimer.segments)) return 0;
+
+      const now = Date.now();
+      return activeTimer.segments.reduce((total, segment) => {
+        const start = new Date(segment.startedAt).getTime();
+        const end = segment.finishedAt
+          ? new Date(segment.finishedAt).getTime()
+          : now;
+
+        if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+          return total;
+        }
+
+        return total + (end - start);
+      }, 0);
+    }
+
+    function calculateActualMinutes() {
+      return Math.max(
+        0,
+        Math.round(calculateActiveMilliseconds() / 60000)
+      );
+    }
+
+    function addActualTimelineSegments(segments, title, timerSessionId) {
+      if (!Array.isArray(segments)) return false;
+
+      let added = false;
+
+      segments.forEach((segment, index) => {
+        if (!segment.startedAt || !segment.finishedAt) return;
+
+        const duration =
+          new Date(segment.finishedAt).getTime() -
+          new Date(segment.startedAt).getTime();
+
+        // 1分未満の区間は「実際」にも記録しない。
+        if (duration < 60 * 1000) return;
+
+        const segmentAdded = addActualTimelineEntry({
+          startedAt: segment.startedAt,
+          finishedAt: segment.finishedAt,
+          title,
+          timerSessionId: `${timerSessionId}-${index}`
+        });
+
+        added = added || segmentAdded;
+      });
+
+      return added;
+    }
+
+    function togglePauseTimer() {
+      if (!activeTimer) return;
+
+      if (!activeTimer.isPaused) {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+
+        const pausedAt = new Date();
+        closeCurrentTimerSegment(pausedAt);
+        activeTimer.isPaused = true;
+        activeTimer.pausedAt = pausedAt.toISOString();
+
+        activeTimerPanel.classList.add("paused");
+        timerOverlayTitle.textContent = "一時停止中";
+        pauseTimerButton.textContent = "再開";
+        return;
+      }
+
+      const resumedAt = new Date();
+      const pausedAt = new Date(activeTimer.pausedAt).getTime();
+      const pauseDuration = resumedAt.getTime() - pausedAt;
+
+      if (Number.isFinite(pauseDuration) && pauseDuration > 0) {
+        activeTimer.endTime += pauseDuration;
+      }
+
+      activeTimer.isPaused = false;
+      activeTimer.pausedAt = null;
+      activeTimer.segments.push({
+        startedAt: resumedAt.toISOString(),
+        finishedAt: null
+      });
+
+      activeTimerPanel.classList.remove("paused");
+      timerOverlayTitle.textContent =
+        activeTimer.mode === "work" ? "集中する" : "休憩する";
+      pauseTimerButton.textContent = "一時停止";
+
+      timerInterval = setInterval(() => {
+        updateTimerDisplay();
+
+        if (activeTimer && Date.now() >= activeTimer.endTime) {
+          handleTimerExpired();
+        }
+      }, 1000);
+    }
+
+    function handleTimerExpired() {
+      if (!activeTimer) return;
+
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+
+      closeCurrentTimerSegment();
+
+      if (activeTimer.mode === "rest") {
+        finishRestTimer();
+        return;
+      }
+
+      activeTimerPanel.hidden = true;
+      timerDecisionPanel.hidden = false;
+      updateExtensionDecision();
+    }
+
+    function updateExtensionDecision() {
+      if (!activeTimer) return;
+
+      const count = activeTimer.extensionCount || 0;
+      extensionCount.textContent = `延長 ${count} / 2回`;
+      extendFiveMinutesButton.disabled = count >= 2;
+      extendFiveMinutesButton.textContent =
+        count >= 2 ? "延長上限です" : "5分だけ延長";
+    }
+
+    function extendWorkTimer() {
+      if (!activeTimer || activeTimer.mode !== "work") return;
+      if ((activeTimer.extensionCount || 0) >= 2) return;
+
+      activeTimer.extensionCount += 1;
+      activeTimer.endTime = Date.now() + 5 * 60 * 1000;
+      activeTimer.isPaused = false;
+      activeTimer.pausedAt = null;
+      activeTimer.segments.push({
+        startedAt: new Date().toISOString(),
+        finishedAt: null
+      });
+
+      timerDecisionPanel.hidden = true;
+      activeTimerPanel.hidden = false;
+      activeTimerPanel.classList.remove("paused");
+      timerOverlayTitle.textContent = "集中する";
+      pauseTimerButton.textContent = "一時停止";
+      updateTimerDisplay();
+
+      timerInterval = setInterval(() => {
+        updateTimerDisplay();
+        if (activeTimer && Date.now() >= activeTimer.endTime) {
+          handleTimerExpired();
+        }
+      }, 1000);
+    }
+
+    function saveWorkSession(endReason) {
+      if (!activeTimer || activeTimer.mode !== "work") return null;
+
+      closeCurrentTimerSegment();
+      const activeMilliseconds = calculateActiveMilliseconds();
+
+      if (activeMilliseconds < 60 * 1000) {
+        return { skipped: true };
+      }
+
+      const finishedAt = new Date().toISOString();
+      const actualMinutes = calculateActualMinutes();
+      const extensionTotal = (activeTimer.extensionCount || 0) * 5;
+      const plannedTotal = activeTimer.initialPlannedMinutes + extensionTotal;
+
+      let status = "途中で終了";
+      let statusType = "early";
+
+      if (endReason === "scheduled" && activeTimer.extensionCount === 0) {
+        status = "予定どおり終了";
+        statusType = "onTime";
+      } else if (activeTimer.extensionCount > 0) {
+        status = `5分延長 × ${activeTimer.extensionCount}`;
+        statusType = "extended";
+      }
+
+      const record = {
+        id: Date.now(),
+        label: activeTimer.label,
+        initialPlannedMinutes: activeTimer.initialPlannedMinutes,
+        plannedTotalMinutes: plannedTotal,
+        actualMinutes,
+        extensionCount: activeTimer.extensionCount || 0,
+        status,
+        statusType,
+        startedAt: activeTimer.startedAt,
+        finishedAt,
+        segments: activeTimer.segments.map(segment => ({ ...segment }))
+      };
+
+      const records = loadArray(WORK_STORAGE_KEY);
+      records.push(record);
+      saveArray(WORK_STORAGE_KEY, records);
+
+      record.timelineAdded = addActualTimelineSegments(
+        record.segments,
+        "作業",
+        `work-${record.id}`
+      );
+
+      return record;
+    }
+
+    function endWorkSession(endReason) {
+      const record = saveWorkSession(endReason);
+      if (!record) return;
+
+      if (record.skipped) {
+        resetTimerScreen("1分未満のため記録しませんでした。");
+        return;
+      }
+
+      let message = `約${record.actualMinutes}分、作業しました。`;
+      if (record.statusType === "onTime") {
+        message += " 予定どおり止まれました。";
+      } else if (record.statusType === "extended") {
+        message += ` 5分延長を${record.extensionCount}回して終了しました。`;
+      } else {
+        message += " 途中で区切りました。";
+      }
+
+      if (record.timelineAdded) {
+        message += " 「1日の管理」の実際にも反映しました。";
+      }
+
+      resetTimerScreen(message);
+      renderWorkHistory();
+    }
+
+    function finishRestTimer() {
+      if (!activeTimer || activeTimer.mode !== "rest") return;
+
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+
+      closeCurrentTimerSegment();
+      activeTimer.finishedAt = new Date().toISOString();
+      activeTimer.actualMilliseconds = calculateActiveMilliseconds();
+      activeTimer.actualMinutes = calculateActualMinutes();
+
+      if (activeTimer.actualMilliseconds < 60 * 1000) {
+        beforeSleepiness.value = "";
+        resetTimerScreen("1分未満のため記録しませんでした。");
+        return;
+      }
+
+      activeTimerPanel.hidden = true;
+      timerDecisionPanel.hidden = true;
+      afterRestPanel.hidden = false;
+      afterSleepiness.focus();
+    }
+
+
+    function finishTimerManually() {
+      if (!activeTimer) return;
+
+      if (activeTimer.mode === "rest") {
+        finishRestTimer();
+      } else {
+        endWorkSession("manual");
+      }
+    }
+
+    function cancelTimer() {
+      resetTimerScreen("タイマーを取り消しました。記録は保存されていません。");
+    }
+
+    function saveRecovery() {
+      if (!activeTimer || activeTimer.mode !== "rest") return;
+
+      const after = Number(afterSleepiness.value);
+      if (!after) {
+        alert("休んだ後の眠気を選んでください。");
+        return;
+      }
+
+      const record = {
+        id: Date.now(),
+        type: "rest",
+        label: activeTimer.label,
+        before: activeTimer.before,
+        after,
+        plannedMinutes: activeTimer.plannedMinutes,
+        actualMinutes: activeTimer.actualMinutes,
+        startedAt: activeTimer.startedAt,
+        finishedAt: activeTimer.finishedAt,
+        segments: activeTimer.segments.map(segment => ({ ...segment }))
+      };
+
+      const records = loadArray(RECOVERY_STORAGE_KEY);
+      records.push(record);
+      saveArray(RECOVERY_STORAGE_KEY, records);
+
+      const timelineAdded = addActualTimelineSegments(
+        record.segments,
+        "休憩",
+        `rest-${record.id}`
+      );
+
+      const difference = activeTimer.before - after;
+      let message = `約${activeTimer.actualMinutes}分休憩しました。`;
+      if (difference > 0) {
+        message += ` 眠気が${difference}段階下がりました。`;
+      } else if (difference === 0) {
+        message += " 眠気は変わりませんでした。";
+      } else {
+        message += ` 眠気が${Math.abs(difference)}段階上がりました。`;
+      }
+
+      if (timelineAdded) {
+        message += " 「1日の管理」の実際にも反映しました。";
+      }
+
+      beforeSleepiness.value = "";
+      resetTimerScreen(message);
+      renderRecoveryHistory();
+    }
+
+    function renderRecoveryHistory() {
+      recoveryHistoryList.replaceChildren();
+
+      const records = loadArray(RECOVERY_STORAGE_KEY)
+        .filter(record => record && record.startedAt)
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+        .slice(0, 10);
+
+      if (records.length === 0) {
+        const item = document.createElement("li");
+        item.className = "empty";
+        item.textContent = "まだ回復の記録はありません。";
+        recoveryHistoryList.appendChild(item);
+        return;
+      }
+
+      for (const record of records) {
+        const item = document.createElement("li");
+
+        const date = document.createElement("span");
+        date.className = "recovery-date";
+        date.textContent = formatDateTime(record.startedAt);
+
+        const restTime = document.createElement("span");
+        restTime.className = "recovery-detail";
+        restTime.textContent = `約${Number(record.actualMinutes) || 0}分休憩`;
+
+        const sleepiness = document.createElement("span");
+        sleepiness.className = "recovery-detail";
+        sleepiness.textContent =
+          `眠気 ${record.before ?? "—"} → ${record.after ?? "—"}`;
+
+        item.append(date, restTime, sleepiness);
+        recoveryHistoryList.appendChild(item);
+      }
+    }
+
+
+    function formatLocalTime(date) {
+      return (
+        String(date.getHours()).padStart(2, "0") +
+        ":" +
+        String(date.getMinutes()).padStart(2, "0")
+      );
+    }
+
+    function addActualTimelineEntry({
+      startedAt,
+      finishedAt,
+      title,
+      timerSessionId
+    }) {
+      const startDate = new Date(startedAt);
+      const finishDate = new Date(finishedAt);
+
+      if (
+        Number.isNaN(startDate.getTime()) ||
+        Number.isNaN(finishDate.getTime()) ||
+        finishDate <= startDate
+      ) {
+        return false;
+      }
+
+      const records = loadArray(SCHEDULE_STORAGE_KEY);
+
+      if (
+        timerSessionId &&
+        records.some(record => record.timerSessionId === timerSessionId)
+      ) {
+        return false;
+      }
+
+      let segmentStart = new Date(startDate);
+      let segmentIndex = 0;
+      let added = false;
+
+      while (segmentStart < finishDate) {
+        const nextMidnight = new Date(segmentStart);
+        nextMidnight.setHours(24, 0, 0, 0);
+
+        const segmentEnd =
+          finishDate < nextMidnight ? finishDate : nextMidnight;
+
+        let start = formatLocalTime(segmentStart);
+        let end =
+          segmentEnd.getTime() === nextMidnight.getTime()
+            ? "23:59"
+            : formatLocalTime(segmentEnd);
+
+        // 1分未満でもタイムライン上で見えるよう、最低1分として表示する。
+        if (timeToMinutes(end) <= timeToMinutes(start)) {
+          const minimumEnd = Math.min(1439, timeToMinutes(start) + 1);
+          end = minutesToTime(minimumEnd);
+        }
+
+        if (timeToMinutes(end) > timeToMinutes(start)) {
+          records.push({
+            id: Date.now() + segmentIndex,
+            date: getDateKey(segmentStart),
+            kind: "actual",
+            title,
+            start,
+            end,
+            source: "timer",
+            timerSessionId
+          });
+          added = true;
+        }
+
+        segmentStart = new Date(segmentEnd);
+        segmentIndex += 1;
+      }
+
+      if (added) {
+        saveArray(SCHEDULE_STORAGE_KEY, records);
+        renderSchedule();
+      }
+
+      return added;
+    }
+
+    function timeToMinutes(time) {
+      const [hours, minutes] = time.split(":").map(Number);
+      return hours * 60 + minutes;
+    }
+
+    function minutesToTime(totalMinutes) {
+      const normalized = Math.max(0, Math.min(1439, totalMinutes));
+      const hours = Math.floor(normalized / 60);
+      const minutes = normalized % 60;
+      return (
+        String(hours).padStart(2, "0") +
+        ":" +
+        String(minutes).padStart(2, "0")
+      );
+    }
+
+    function roundToFiveMinutes(totalMinutes) {
+      return Math.min(1435, Math.max(0, Math.round(totalMinutes / 5) * 5));
+    }
+
+    function normalizeScheduleStart() {
+      // 開始時刻は5分刻みの選択肢だけなので補正不要。
+      return scheduleStart.value;
+    }
+
+    function populateScheduleStartOptions() {
+      scheduleStart.replaceChildren();
+
+      for (let minutes = 0; minutes < 24 * 60; minutes += 5) {
+        const option = document.createElement("option");
+        option.value = minutesToTime(minutes);
+        option.textContent = minutesToTime(minutes);
+        scheduleStart.appendChild(option);
+      }
+    }
+
+    function populateScheduleDurations() {
+      scheduleDuration.replaceChildren();
+
+      for (let minutes = 5; minutes <= 240; minutes += 5) {
+        const option = document.createElement("option");
+        option.value = String(minutes);
+        option.textContent = `${minutes}分`;
+
+        if (minutes === 30) {
+          option.selected = true;
+        }
+
+        scheduleDuration.appendChild(option);
+      }
+    }
+
+    function setInitialScheduleTimes() {
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const roundedStart = Math.min(
+        1435,
+        Math.ceil(currentMinutes / 5) * 5
+      );
+
+      scheduleStart.value = minutesToTime(roundedStart);
+    }
+
+    function changeScheduleDate(dayDifference) {
+      const date = new Date(scheduleDate.value + "T00:00:00");
+      date.setDate(date.getDate() + dayDifference);
+      scheduleDate.value = getDateKey(date);
+      renderSchedule();
+    }
+
+    function addScheduleRecord() {
+      const title = scheduleTitle.value.trim();
+      normalizeScheduleStart();
+
+      const start = scheduleStart.value;
+      const durationMinutes = Number(scheduleDuration.value);
+
+      if (
+        !scheduleDate.value ||
+        !title ||
+        !start ||
+        !Number.isFinite(durationMinutes)
+      ) {
+        alert("日付・内容・開始時刻・時間を入力してください。");
+        return;
+      }
+
+      const startMinutes = timeToMinutes(start);
+      const endMinutes = startMinutes + durationMinutes;
+
+      if (endMinutes > 1439) {
+        alert("日付をまたぐ計画は、翌日分を分けて登録してください。");
+        return;
+      }
+
+      const end = minutesToTime(endMinutes);
+      const records = loadArray(SCHEDULE_STORAGE_KEY);
+
+      records.push({
+        id: Date.now(),
+        date: scheduleDate.value,
+        kind: scheduleKind.value,
+        title,
+        start,
+        end,
+        durationMinutes
+      });
+
+      saveArray(SCHEDULE_STORAGE_KEY, records);
+
+      scheduleTitle.value = "";
+      scheduleStart.value = end;
+      renderSchedule();
+    }
+
+    function deleteScheduleRecord(id) {
+      const records = loadArray(SCHEDULE_STORAGE_KEY)
+        .filter(record => String(record.id) !== String(id));
+      saveArray(SCHEDULE_STORAGE_KEY, records);
+      renderSchedule();
+    }
+
+    function populateEditStartOptions(kind, preferredValue) {
+      editScheduleStart.replaceChildren();
+
+      const step = kind === "plan" ? 5 : 1;
+
+      for (let minutes = 0; minutes < 24 * 60; minutes += step) {
+        const value = minutesToTime(minutes);
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        editScheduleStart.appendChild(option);
+      }
+
+      let value = preferredValue;
+
+      if (!value) {
+        value = scheduleStart.value || "00:00";
+      }
+
+      if (kind === "plan") {
+        value = minutesToTime(
+          roundToFiveMinutes(timeToMinutes(value))
+        );
+      }
+
+      editScheduleStart.value = value;
+    }
+
+    function populateEditDurationOptions(
+      kind,
+      preferredDuration = null
+    ) {
+      editScheduleDuration.replaceChildren();
+
+      const step = kind === "plan" ? 5 : 1;
+      const defaultMaximum = kind === "plan" ? 240 : 720;
+      const maximum = Math.max(
+        defaultMaximum,
+        Number(preferredDuration) || 0
+      );
+
+      for (let minutes = step; minutes <= maximum; minutes += step) {
+        const option = document.createElement("option");
+        option.value = String(minutes);
+        option.textContent = `${minutes}分`;
+        editScheduleDuration.appendChild(option);
+      }
+
+      let duration = Math.max(
+        step,
+        Number(preferredDuration) || (kind === "plan" ? 30 : 1)
+      );
+
+      if (kind === "plan") {
+        duration = Math.max(5, Math.round(duration / 5) * 5);
+      }
+
+      if (
+        ![...editScheduleDuration.options]
+          .some(option => Number(option.value) === duration)
+      ) {
+        const option = document.createElement("option");
+        option.value = String(duration);
+        option.textContent = `${duration}分`;
+        editScheduleDuration.appendChild(option);
+      }
+
+      editScheduleDuration.value = String(duration);
+    }
+
+    function openScheduleEditor(record) {
+      editingScheduleId = record.id;
+
+      const duration = Math.max(
+        1,
+        timeToMinutes(record.end) - timeToMinutes(record.start)
+      );
+
+      editScheduleKind.value = record.kind;
+      editScheduleDate.value = record.date;
+      editScheduleTitle.value = record.title;
+      populateEditStartOptions(record.kind, record.start);
+      populateEditDurationOptions(record.kind, duration);
+
+      scheduleEditHeading.textContent =
+        record.kind === "plan" ? "計画を編集" : "実際を編集";
+
+      scheduleEditOverlay.hidden = false;
+      document.body.classList.add("schedule-edit-open");
+      editScheduleTitle.focus();
+      editScheduleTitle.select();
+    }
+
+    function closeScheduleEditor() {
+      editingScheduleId = null;
+      scheduleEditOverlay.hidden = true;
+      document.body.classList.remove("schedule-edit-open");
+    }
+
+    function saveScheduleEdit() {
+      if (editingScheduleId === null) return;
+
+      const title = editScheduleTitle.value.trim();
+      const start = editScheduleStart.value;
+      const durationMinutes = Number(editScheduleDuration.value);
+
+      if (
+        !editScheduleDate.value ||
+        !title ||
+        !start ||
+        !Number.isFinite(durationMinutes) ||
+        durationMinutes < 1
+      ) {
+        alert("日付・内容・開始・長さを入力してください。");
+        return;
+      }
+
+      const startMinutes = timeToMinutes(start);
+      const endMinutes = startMinutes + durationMinutes;
+
+      if (endMinutes > 1439) {
+        alert("日付をまたぐ記録は、翌日分を分けて登録してください。");
+        return;
+      }
+
+      const records = loadArray(SCHEDULE_STORAGE_KEY);
+      const record = records.find(
+        item => String(item.id) === String(editingScheduleId)
+      );
+
+      if (!record) {
+        alert("編集する記録が見つかりませんでした。");
+        closeScheduleEditor();
+        renderSchedule();
+        return;
+      }
+
+      record.kind = editScheduleKind.value;
+      record.date = editScheduleDate.value;
+      record.title = title;
+      record.start = start;
+      record.end = minutesToTime(endMinutes);
+      record.durationMinutes = durationMinutes;
+      record.manuallyEdited = true;
+
+      saveArray(SCHEDULE_STORAGE_KEY, records);
+
+      scheduleDate.value = record.date;
+      closeScheduleEditor();
+      renderSchedule();
+    }
+
+    function deleteEditingSchedule() {
+      if (editingScheduleId === null) return;
+
+      deleteScheduleRecord(editingScheduleId);
+      closeScheduleEditor();
+    }
+
+    function createScheduleEvent(record, laneIndex = 0, laneCount = 1) {
+      const pxPerMinute = 48 / 60;
+      const startMinutes = timeToMinutes(record.start);
+      const endMinutes = timeToMinutes(record.end);
+
+      const event = document.createElement("div");
+      const durationMinutes = endMinutes - startMinutes;
+
+      // 60分未満は高さが足りず2行表示が潰れるため、
+      // 時刻と内容を横並びの1行で表示する。
+      const isCompact = durationMinutes < 60 || laneCount > 1;
+
+      event.className =
+        "schedule-event" +
+        (record.kind === "actual" ? " actual" : "") +
+        (isCompact ? " compact" : "");
+
+      event.style.top = `${startMinutes * pxPerMinute}px`;
+      event.style.height =
+        `${Math.max(26, durationMinutes * pxPerMinute)}px`;
+
+      if (laneCount > 1) {
+        const laneWidth = 100 / laneCount;
+        event.style.left = `calc(${laneIndex * laneWidth}% + 4px)`;
+        event.style.width = `calc(${laneWidth}% - 8px)`;
+        event.style.right = "auto";
+      }
+
+      event.title = `${record.start}–${record.end} ${record.title}`;
+
+      const time = document.createElement("span");
+      time.className = "schedule-event-time";
+      time.textContent = `${record.start}–${record.end}`;
+
+      const title = document.createElement("span");
+      title.className = "schedule-event-title";
+      title.textContent = record.title;
+
+      event.tabIndex = 0;
+      event.setAttribute("role", "button");
+      event.setAttribute(
+        "aria-label",
+        `${record.start}から${record.end}の${record.title}を編集`
+      );
+
+      event.addEventListener("click", () => {
+        openScheduleEditor(record);
+      });
+
+      event.addEventListener("keydown", eventKey => {
+        if (eventKey.key === "Enter" || eventKey.key === " ") {
+          eventKey.preventDefault();
+          openScheduleEditor(record);
+        }
+      });
+
+      event.append(time, title);
+      return event;
+    }
+
+
+    function layoutScheduleRecords(records) {
+      const pxPerMinute = 48 / 60;
+      const minimumVisualMinutes = 26 / pxPerMinute;
+
+      const items = records
+        .map(record => {
+          const start = timeToMinutes(record.start);
+          const end = timeToMinutes(record.end);
+
+          return {
+            record,
+            start,
+            visualEnd: Math.max(end, start + minimumVisualMinutes),
+            laneIndex: 0,
+            laneCount: 1
+          };
+        })
+        .sort((a, b) => a.start - b.start);
+
+      const laidOut = [];
+      let group = [];
+      let groupEnd = -1;
+
+      function finishGroup() {
+        if (group.length === 0) return;
+
+        const laneEnds = [];
+
+        for (const item of group) {
+          let laneIndex = laneEnds.findIndex(end => end <= item.start);
+
+          if (laneIndex === -1) {
+            laneIndex = laneEnds.length;
+          }
+
+          laneEnds[laneIndex] = item.visualEnd;
+          item.laneIndex = laneIndex;
+        }
+
+        const laneCount = Math.max(1, laneEnds.length);
+
+        for (const item of group) {
+          item.laneCount = laneCount;
+          laidOut.push(item);
+        }
+
+        group = [];
+        groupEnd = -1;
+      }
+
+      for (const item of items) {
+        if (group.length === 0 || item.start < groupEnd) {
+          group.push(item);
+          groupEnd = Math.max(groupEnd, item.visualEnd);
+        } else {
+          finishGroup();
+          group.push(item);
+          groupEnd = item.visualEnd;
+        }
+      }
+
+      finishGroup();
+      return laidOut;
+    }
+
+    function renderTimeAxis() {
+      timeAxis.replaceChildren();
+
+      for (let hour = 0; hour <= 24; hour++) {
+        const label = document.createElement("span");
+        label.className = "hour-label";
+        label.style.top = `${hour * 48}px`;
+        label.textContent = String(hour).padStart(2, "0") + ":00";
+        timeAxis.appendChild(label);
+      }
+    }
+
+    function renderNowLine(container) {
+      if (scheduleDate.value !== getDateKey()) return;
+
+      const now = new Date();
+      const minutes = now.getHours() * 60 + now.getMinutes();
+
+      const line = document.createElement("div");
+      line.className = "now-line";
+      line.style.top = `${minutes * (48 / 60)}px`;
+      container.appendChild(line);
+    }
+
+    function renderSchedule() {
+      renderTimeAxis();
+      planTimeline.replaceChildren();
+      actualTimeline.replaceChildren();
+
+      const records = loadArray(SCHEDULE_STORAGE_KEY)
+        .filter(record => record.date === scheduleDate.value)
+        .sort((a, b) => a.start.localeCompare(b.start));
+
+      const plans = records.filter(record => record.kind === "plan");
+      const actuals = records.filter(record => record.kind === "actual");
+
+      for (const item of layoutScheduleRecords(plans)) {
+        planTimeline.appendChild(
+          createScheduleEvent(item.record, item.laneIndex, item.laneCount)
+        );
+      }
+
+      for (const item of layoutScheduleRecords(actuals)) {
+        actualTimeline.appendChild(
+          createScheduleEvent(item.record, item.laneIndex, item.laneCount)
+        );
+      }
+
+      renderNowLine(planTimeline);
+      renderNowLine(actualTimeline);
+    }
+
+    function setTodayTask() {
+      const text = taskInput.value.trim();
+      if (!text) return;
+
+      const records = loadArray(TASK_STORAGE_KEY);
+      const today = getDateKey();
+      const existing = records.find(record => record.date === today);
+
+      if (existing) {
+        existing.text = text;
+        existing.done = false;
+        existing.completedAt = null;
+      } else {
+        records.push({
+          date: today,
+          text,
+          done: false,
+          completedAt: null
+        });
+      }
+
+      saveArray(TASK_STORAGE_KEY, records);
+      taskInput.value = "";
+      renderTaskRecords();
+    }
+
+    function completeTodayTask() {
+      const records = loadArray(TASK_STORAGE_KEY);
+      const today = getDateKey();
+      const record = records.find(item => item.date === today);
+      if (!record) return;
+
+      record.done = true;
+      record.completedAt = new Date().toISOString();
+      saveArray(TASK_STORAGE_KEY, records);
+      renderTaskRecords();
+    }
+
+    function renderToday(records) {
+      const today = getDateKey();
+      const record = records.find(item => item.date === today);
+      todayArea.replaceChildren();
+
+      if (!record) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "まだ今日の一歩は決まっていません。";
+        todayArea.appendChild(empty);
+        return;
+      }
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "today-task" + (record.done ? " done" : "");
+
+      const text = document.createElement("span");
+      text.textContent = record.done ? `✓ ${record.text}` : record.text;
+
+      const button = document.createElement("button");
+      button.className = record.done ? "secondary" : "primary";
+      button.type = "button";
+      button.textContent = record.done ? "完了済み" : "できた";
+      button.disabled = record.done;
+
+      if (!record.done) {
+        button.addEventListener("click", completeTodayTask);
+      }
+
+      wrapper.append(text, button);
+      todayArea.appendChild(wrapper);
+    }
+
+    function renderWeek(records) {
+      weekArea.replaceChildren();
+
+      for (let offset = 6; offset >= 0; offset--) {
+        const date = new Date();
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() - offset);
+
+        const dateKey = getDateKey(date);
+        const record = records.find(item => item.date === dateKey);
+
+        const day = document.createElement("div");
+        day.className = "day" + (record?.done ? " done" : "");
+
+        const weekday = new Intl.DateTimeFormat("ja-JP", {
+          weekday: "short"
+        }).format(date);
+
+        day.innerHTML = `
+          <div>${weekday}</div>
+          <div>${date.getDate()}</div>
+          <div>${record?.done ? "✓" : "・"}</div>
+        `;
+        weekArea.appendChild(day);
+      }
+    }
+
+    function renderHistory(records) {
+      historyList.replaceChildren();
+
+      const completed = records
+        .filter(record => record.done)
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      if (completed.length === 0) {
+        const item = document.createElement("li");
+        item.className = "empty";
+        item.textContent = "まだ完了した記録はありません。";
+        historyList.appendChild(item);
+        return;
+      }
+
+      for (const record of completed) {
+        const item = document.createElement("li");
+
+        const text = document.createElement("span");
+        text.textContent = record.text;
+
+        const date = document.createElement("span");
+        date.className = "history-date";
+        date.textContent = formatDate(record.date);
+
+        item.append(text, date);
+        historyList.appendChild(item);
+      }
+    }
+
+    function renderWorkHistory() {
+      workHistoryList.replaceChildren();
+
+      const records = loadArray(WORK_STORAGE_KEY)
+        .filter(record => record && record.startedAt)
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+        .slice(0, 20);
+
+      if (records.length === 0) {
+        const item = document.createElement("li");
+        item.className = "empty";
+        item.textContent = "まだ作業の記録はありません。";
+        workHistoryList.appendChild(item);
+        return;
+      }
+
+      for (const record of records) {
+        const item = document.createElement("li");
+
+        const date = document.createElement("span");
+        date.className = "recovery-date";
+        date.textContent = formatDateTime(record.startedAt);
+
+        const detail = document.createElement("span");
+        detail.className = "recovery-detail";
+        detail.textContent =
+          `予定${record.initialPlannedMinutes}分 ／ 実際約${record.actualMinutes}分`;
+
+        const status = document.createElement("span");
+        status.className = "work-status";
+        if (record.statusType === "extended") {
+          status.classList.add("extended");
+        } else if (record.statusType === "early") {
+          status.classList.add("early");
+        }
+        status.textContent = record.status || "作業終了";
+
+        item.append(date, detail, status);
+        workHistoryList.appendChild(item);
+      }
+    }
+
+    function renderTaskRecords() {
+      const records = loadArray(TASK_STORAGE_KEY);
+      renderToday(records);
+      renderWeek(records);
+      renderHistory(records);
+    }
+
+    for (const button of tabButtons) {
+      button.addEventListener("click", () => {
+        showTab(button.dataset.tabTarget);
+      });
+    }
+
+    for (const button of modeButtons) {
+      button.addEventListener("click", () => {
+        showMode(button.dataset.modeTarget);
+      });
+    }
+
+    syncStatusButton.addEventListener("click", openSyncDialog);
+    closeSyncButton.addEventListener("click", closeSyncDialog);
+
+    syncOverlay.addEventListener("click", event => {
+      if (event.target === syncOverlay) {
+        closeSyncDialog();
+      }
+    });
+
+    signInSyncButton.addEventListener("click", signInForSync);
+    signOutSyncButton.addEventListener("click", signOutFromSync);
+
+    refreshFromCloudButton.addEventListener("click", async () => {
+      await pullCloudState({ createWhenMissing: true });
+    });
+
+    saveToCloudButton.addEventListener("click", async () => {
+      await pushLocalStateToCloud();
+    });
+
+    syncPassword.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        signInForSync();
+      }
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && !syncOverlay.hidden) {
+        closeSyncDialog();
+      }
+    });
+
+    for (const button of presetButtons) {
+      button.addEventListener("click", () => {
+        startTimer(
+          Number(button.dataset.minutes),
+          button.dataset.label || `${button.dataset.minutes}分`
+        );
+      });
+    }
+
+    customToggleButton.addEventListener("click", () => {
+      customTimerPanel.hidden = !customTimerPanel.hidden;
+      if (!customTimerPanel.hidden) {
+        customMinutes.focus();
+      }
+    });
+
+    startCustomTimerButton.addEventListener("click", () => {
+      const minutes = Number(customMinutes.value);
+      startTimer(minutes, `${minutes}分`);
+    });
+
+    customMinutes.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        startCustomTimerButton.click();
+      }
+    });
+
+    finishTimerButton.addEventListener("click", finishTimerManually);
+    pauseTimerButton.addEventListener("click", togglePauseTimer);
+    timerOverlayCloseButton.addEventListener("click", cancelTimer);
+    stopOnTimeButton.addEventListener("click", () => endWorkSession("scheduled"));
+    extendFiveMinutesButton.addEventListener("click", extendWorkTimer);
+    saveRecoveryButton.addEventListener("click", saveRecovery);
+    cancelRecoveryButton.addEventListener("click", () => {
+      beforeSleepiness.value = "";
+      resetTimerScreen("休憩記録を保存せず戻りました。");
+    });
+
+    closeScheduleEditButton.addEventListener(
+      "click",
+      closeScheduleEditor
+    );
+    cancelScheduleEditButton.addEventListener(
+      "click",
+      closeScheduleEditor
+    );
+    saveScheduleEditButton.addEventListener(
+      "click",
+      saveScheduleEdit
+    );
+    deleteScheduleEditButton.addEventListener(
+      "click",
+      deleteEditingSchedule
+    );
+
+    scheduleEditOverlay.addEventListener("click", event => {
+      if (event.target === scheduleEditOverlay) {
+        closeScheduleEditor();
+      }
+    });
+
+    document.addEventListener("keydown", event => {
+      if (
+        event.key === "Escape" &&
+        !scheduleEditOverlay.hidden
+      ) {
+        closeScheduleEditor();
+      }
+    });
+
+    editScheduleKind.addEventListener("change", () => {
+      const currentStart = editScheduleStart.value;
+      const currentDuration = Number(editScheduleDuration.value);
+
+      populateEditStartOptions(
+        editScheduleKind.value,
+        currentStart
+      );
+      populateEditDurationOptions(
+        editScheduleKind.value,
+        currentDuration
+      );
+
+      scheduleEditHeading.textContent =
+        editScheduleKind.value === "plan"
+          ? "計画を編集"
+          : "実際を編集";
+    });
+
+    addScheduleButton.addEventListener("click", addScheduleRecord);
+    scheduleTitle.addEventListener("keydown", event => {
+      if (event.key === "Enter") addScheduleRecord();
+    });
+    scheduleDate.addEventListener("change", renderSchedule);
+    scheduleStart.addEventListener("change", normalizeScheduleStart);
+    previousDayButton.addEventListener("click", () => changeScheduleDate(-1));
+    todayScheduleButton.addEventListener("click", () => {
+      scheduleDate.value = getDateKey();
+      renderSchedule();
+    });
+    nextDayButton.addEventListener("click", () => changeScheduleDate(1));
+
+    saveTaskButton.addEventListener("click", setTodayTask);
+    taskInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") setTodayTask();
+    });
+
+    scheduleDate.value = getDateKey();
+    populateScheduleStartOptions();
+    populateScheduleDurations();
+    setInitialScheduleTimes();
+
+    let storedTab = "timer";
+    try {
+      storedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) || "timer";
+    } catch {
+      storedTab = "timer";
+    }
+
+    showMode("work");
+    showTab(storedTab);
+    renderRecoveryHistory();
+    renderSchedule();
+    renderTaskRecords();
+    renderWorkHistory();
+    initializeCloudSync();
+  </script>
+</body>
+</html>
