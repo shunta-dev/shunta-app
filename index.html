@@ -2,8 +2,16 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>積み重ね</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-title" content="Shunta App" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+  <title>Shunta App</title>
   <style>
     :root {
       color-scheme: dark;
@@ -34,6 +42,11 @@
 
     body {
       margin: 0;
+      padding:
+        env(safe-area-inset-top)
+        env(safe-area-inset-right)
+        env(safe-area-inset-bottom)
+        env(safe-area-inset-left);
       background: var(--bg);
       color: var(--text);
     }
@@ -389,21 +402,6 @@
       color: var(--muted);
       font-size: 14px;
       line-height: 1.6;
-    }
-
-    .extension-count {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 112px;
-      margin-bottom: 18px;
-      border: 1px solid #4a4a4e;
-      border-radius: 999px;
-      background: #232326;
-      padding: 7px 13px;
-      color: #dddddf;
-      font-size: 13px;
-      font-variant-numeric: tabular-nums;
     }
 
     .decision-actions {
@@ -1158,6 +1156,291 @@
       }
     }
 
+
+    .timer-visual {
+      display: grid;
+      width: 96px;
+      height: 96px;
+      place-items: center;
+      margin-top: 24px;
+      border: 1px solid #39424d;
+      border-radius: 28px;
+      background: #1b2530;
+      font-size: 50px;
+      line-height: 1;
+    }
+
+    .timer-settings-link {
+      border: 0;
+      background: transparent;
+      color: var(--accent);
+      padding: 12px 14px;
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    .timer-settings-link:hover {
+      text-decoration: underline;
+    }
+
+    .next-work-panel {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      background: var(--panel);
+      padding: 18px 18px 20px;
+      text-align: center;
+    }
+
+    .next-work-panel h3,
+    .post-work-panel h3 {
+      margin: 0 0 12px;
+      font-size: 15px;
+    }
+
+    .choice-row,
+    .break-choice-grid {
+      display: grid;
+      gap: 9px;
+    }
+
+    .choice-row {
+      width: min(420px, 100%);
+      grid-template-columns: repeat(3, 1fr);
+      margin: 0 auto;
+    }
+
+    .break-choice-grid {
+      width: min(520px, 100%);
+      grid-template-columns: repeat(4, 1fr);
+      margin: 18px auto;
+    }
+
+    .choice-button,
+    .break-choice-button {
+      border: 1px solid #56565b;
+      border-radius: 9px;
+      background: #222224;
+      color: var(--text);
+      padding: 11px 8px;
+      font-weight: 650;
+    }
+
+    .choice-button[aria-pressed="true"] {
+      border-color: var(--accent);
+      background: #4d83b4;
+      color: #ffffff;
+    }
+
+    .next-work-cancel {
+      display: block;
+      margin: 10px auto 0;
+      border: 0;
+      background: transparent;
+      color: var(--accent);
+      padding: 8px 12px;
+    }
+
+    .post-work-panel {
+      text-align: center;
+    }
+
+    .post-work-summary {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .post-work-secondary-actions {
+      display: grid;
+      width: min(520px, 100%);
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .notification-settings-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 170;
+      min-height: 100vh;
+      overflow-y: auto;
+      background: var(--bg);
+    }
+
+    .notification-settings-header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: grid;
+      min-height: 62px;
+      grid-template-columns: 48px 1fr 48px;
+      align-items: center;
+      border-bottom: 1px solid #303033;
+      background: rgba(42, 42, 43, 0.98);
+    }
+
+    .notification-settings-header h2 {
+      margin: 0;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    .settings-back-button {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      justify-self: center;
+      border: 1px solid #3d3d40;
+      border-radius: 999px;
+      background: #1b1b1d;
+      color: var(--text);
+      padding: 0 2px 1px 0;
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .notification-settings-content {
+      width: min(760px, 100%);
+      margin: 0 auto;
+      padding: 0 0 110px;
+    }
+
+    .settings-group-title {
+      margin: 0;
+      padding: 22px 14px 9px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .settings-list {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .settings-row {
+      display: grid;
+      min-height: 56px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+    }
+
+    .settings-row:last-child {
+      border-bottom: 0;
+    }
+
+    .settings-row label,
+    .settings-row .settings-label {
+      min-width: 0;
+      font-size: 14px;
+    }
+
+    .settings-row select {
+      width: auto;
+      min-width: 112px;
+      padding: 8px 10px;
+      font-size: 14px;
+    }
+
+    .settings-action {
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--accent);
+      padding: 17px 14px;
+      text-align: center;
+      font-weight: 650;
+    }
+
+    .settings-action:last-child {
+      border-bottom: 0;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-flex;
+      width: 50px;
+      height: 30px;
+      flex: 0 0 auto;
+    }
+
+    .switch input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+    }
+
+    .switch-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: #626268;
+      transition: 0.18s ease;
+    }
+
+    .switch-track::after {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+      content: "";
+      transition: 0.18s ease;
+    }
+
+    .switch input:checked + .switch-track {
+      background: #5d9dd9;
+    }
+
+    .switch input:checked + .switch-track::after {
+      transform: translateX(20px);
+    }
+
+    .settings-note,
+    .settings-status {
+      margin: 0;
+      padding: 13px 14px;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .settings-note {
+      color: #df7777;
+    }
+
+    .settings-status {
+      min-height: 46px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 520px) {
+      .break-choice-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .timer-visual {
+        width: 82px;
+        height: 82px;
+        margin-top: 18px;
+        border-radius: 24px;
+        font-size: 42px;
+      }
+
+      .next-work-panel {
+        padding-bottom: calc(18px + env(safe-area-inset-bottom));
+      }
+    }
+
     /* 下部ナビ */
     .app-tabs {
       position: fixed;
@@ -1387,6 +1670,88 @@
     </section>
   </div>
 
+  <section id="notificationSettingsOverlay"
+    class="notification-settings-overlay" hidden>
+    <header class="notification-settings-header">
+      <button id="closeNotificationSettingsButton"
+        class="settings-back-button" type="button"
+        aria-label="通知設定を閉じる">‹</button>
+      <h2>通知音・バイブの設定</h2>
+      <span aria-hidden="true"></span>
+    </header>
+
+    <div class="notification-settings-content">
+      <p class="settings-group-title">アプリを開いている時</p>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-label">音を鳴らす</span>
+          <label class="switch">
+            <input id="openSoundToggle" type="checkbox" checked />
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">バイブさせる</span>
+          <label class="switch">
+            <input id="openVibrationToggle" type="checkbox" checked />
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <button id="testOpenAlertButton" class="settings-action" type="button">
+          どんな感じになるかテストする（すぐ）
+        </button>
+      </div>
+
+      <p class="settings-note">
+        アプリを閉じている時の音とバイブは、iPhone側の通知設定に従います。
+      </p>
+
+      <p class="settings-group-title">アプリを閉じている時</p>
+      <div class="settings-list">
+        <div class="settings-row">
+          <span class="settings-label">通知を使う</span>
+          <label class="switch">
+            <input id="systemNotificationToggle" type="checkbox" />
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <div class="settings-row">
+          <label for="notificationCountSelect">通知回数</label>
+          <select id="notificationCountSelect">
+            <option value="1">1回</option>
+            <option value="2">2回</option>
+            <option value="3">3回</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">繰り返し通知</span>
+          <label class="switch">
+            <input id="repeatNotificationToggle" type="checkbox" />
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <button id="requestNotificationButton" class="settings-action"
+          type="button">通知を許可する</button>
+        <button id="testSystemNotificationButton" class="settings-action"
+          type="button">通知が届くかテストする（3秒後）</button>
+      </div>
+
+      <p class="settings-group-title">共通</p>
+      <div class="settings-list">
+        <div class="settings-row">
+          <label for="alertSoundSelect">通知の音</label>
+          <select id="alertSoundSelect">
+            <option value="soft">やさしい音</option>
+            <option value="bell">ベル</option>
+            <option value="bird">ウグイス風</option>
+          </select>
+        </div>
+      </div>
+
+      <p id="notificationSettingsStatus" class="settings-status"></p>
+    </div>
+  </section>
+
   <main>
     <section class="tab-panel" data-tab-panel="timer">
       <div class="mode-switch" role="tablist" aria-label="タイマーの種類">
@@ -1433,18 +1798,6 @@
         </div>
 
         <div id="restModePanel" class="mode-panel" data-mode-panel="rest" hidden>
-          <div class="sleepiness-box">
-            <label for="beforeSleepiness">今の眠気</label>
-            <select id="beforeSleepiness">
-              <option value="">選ぶ</option>
-              <option value="1">1：ほぼ眠くない</option>
-              <option value="2">2：少し眠い</option>
-              <option value="3">3：眠い</option>
-              <option value="4">4：かなり眠い</option>
-              <option value="5">5：限界に近い</option>
-            </select>
-          </div>
-
           <div class="timer-list">
             <button class="timer-preset" type="button" data-minutes="5"
               data-label="少し目を閉じる" style="--line-width: 14px">
@@ -1468,7 +1821,7 @@
 
           <section class="section">
             <div class="section-heading">
-              <h2>回復の記録</h2>
+              <h2>休憩の記録</h2>
             </div>
             <ul id="recoveryHistoryList"></ul>
           </section>
@@ -1485,8 +1838,29 @@
 
         <div class="timer-overlay-content">
           <div class="active-timer">
+            <p id="timerModeCaption" class="timer-label">作業中</p>
             <p id="timerTime" class="timer-time">00:00</p>
+
+            <div id="workTimerVisual" class="timer-visual"
+              aria-label="作業中のイメージ">🧑‍💻</div>
+            <div id="restTimerVisual" class="timer-visual"
+              aria-label="休憩中のイメージ" hidden>🧘</div>
+
+            <button id="openTimerSettingsButton" class="timer-settings-link"
+              type="button">通知音・バイブの設定</button>
           </div>
+
+          <section id="nextWorkPanel" class="next-work-panel" hidden>
+            <h3>休憩後、次のタイマーを開始</h3>
+            <div class="choice-row" aria-label="次の作業時間">
+              <button class="choice-button next-work-choice" type="button"
+                data-next-work-minutes="10">10 min</button>
+              <button class="choice-button next-work-choice" type="button"
+                data-next-work-minutes="25" aria-pressed="true">25 min</button>
+              <button class="choice-button next-work-choice" type="button"
+                data-next-work-minutes="60">60 min</button>
+            </div>
+          </section>
 
           <div class="timer-overlay-menu">
             <button id="finishTimerButton" class="timer-menu-button" type="button">
@@ -1499,43 +1873,29 @@
         </div>
       </section>
 
-      <section id="timerDecisionPanel" class="section decision-panel timer-state-overlay" hidden>
-        <p class="decision-title">予定時間が終わりました</p>
-        <p class="decision-text">
-          ここで区切るか、必要な場合だけ5分延長します。
+      <section id="timerDecisionPanel"
+        class="timer-state-overlay post-work-panel" hidden>
+        <p class="decision-title">作業終了</p>
+        <p id="workFinishedSummary" class="post-work-summary">
+          休憩時間を選ぶと、すぐに休憩タイマーが始まります。
         </p>
-        <div id="extensionCount" class="extension-count">延長 0 / 2回</div>
-        <div class="decision-actions">
-          <button id="stopOnTimeButton" class="primary" type="button">
-            ここで終了
-          </button>
-          <button id="extendFiveMinutesButton" class="secondary" type="button">
-            5分だけ延長
-          </button>
-        </div>
-      </section>
 
-      <section id="afterRestPanel" class="section after-panel timer-state-overlay" hidden>
-        <div class="field">
-          <label for="afterSleepiness">休んだ後の眠気</label>
-          <select id="afterSleepiness">
-            <option value="">選ぶ</option>
-            <option value="1">1：ほぼ眠くない</option>
-            <option value="2">2：少し眠い</option>
-            <option value="3">3：眠い</option>
-            <option value="4">4：かなり眠い</option>
-            <option value="5">5：限界に近い</option>
-          </select>
+        <div class="break-choice-grid" aria-label="休憩時間">
+          <button class="break-choice-button" type="button"
+            data-break-minutes="1">1 min</button>
+          <button class="break-choice-button" type="button"
+            data-break-minutes="3">3 min</button>
+          <button class="break-choice-button" type="button"
+            data-break-minutes="5">5 min</button>
+          <button class="break-choice-button" type="button"
+            data-break-minutes="20">20 min</button>
         </div>
-        <div class="timer-actions">
-          <button id="saveRecoveryButton" class="primary" type="button">
-            回復記録を残す
-          </button>
-          <button id="cancelRecoveryButton" class="secondary" type="button">
-            記録せず戻る
+
+        <div class="post-work-secondary-actions">
+          <button id="finishWithoutBreakButton" class="secondary" type="button">
+            休憩せず終了
           </button>
         </div>
-        <p class="helper">保存を押すまでは記録されません。</p>
       </section>
 
       <div id="timerMessage" class="status-message" hidden></div>
@@ -1740,6 +2100,7 @@
     const SCHEDULE_STORAGE_KEY = "tsumikasane-schedule-v1";
     const ACTIVE_TAB_STORAGE_KEY = "tsumikasane-active-tab-v2";
     const LOCAL_UPDATED_AT_KEY = "tsumikasane-local-updated-at-v1";
+    const TIMER_SETTINGS_STORAGE_KEY = "shunta-timer-settings-v2";
 
     const SUPABASE_URL = "https://rpqtdcroxxffjygunaui.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY =
@@ -1794,20 +2155,53 @@
     const timerSetup = document.getElementById("timerSetup");
     const activeTimerPanel = document.getElementById("activeTimerPanel");
     const timerOverlayTitle = document.getElementById("timerOverlayTitle");
+    const timerModeCaption = document.getElementById("timerModeCaption");
     const timerOverlayCloseButton =
       document.getElementById("timerOverlayCloseButton");
-    const afterRestPanel = document.getElementById("afterRestPanel");
     const timerTime = document.getElementById("timerTime");
     const finishTimerButton = document.getElementById("finishTimerButton");
     const pauseTimerButton = document.getElementById("pauseTimerButton");
+    const workTimerVisual = document.getElementById("workTimerVisual");
+    const restTimerVisual = document.getElementById("restTimerVisual");
+    const nextWorkPanel = document.getElementById("nextWorkPanel");
+    const nextWorkChoiceButtons =
+      [...document.querySelectorAll(".next-work-choice")];
+    const openTimerSettingsButton =
+      document.getElementById("openTimerSettingsButton");
+
     const timerDecisionPanel = document.getElementById("timerDecisionPanel");
-    const extensionCount = document.getElementById("extensionCount");
-    const stopOnTimeButton = document.getElementById("stopOnTimeButton");
-    const extendFiveMinutesButton = document.getElementById("extendFiveMinutesButton");
-    const beforeSleepiness = document.getElementById("beforeSleepiness");
-    const afterSleepiness = document.getElementById("afterSleepiness");
-    const saveRecoveryButton = document.getElementById("saveRecoveryButton");
-    const cancelRecoveryButton = document.getElementById("cancelRecoveryButton");
+    const workFinishedSummary =
+      document.getElementById("workFinishedSummary");
+    const finishWithoutBreakButton =
+      document.getElementById("finishWithoutBreakButton");
+    const breakChoiceButtons =
+      [...document.querySelectorAll("[data-break-minutes]")];
+
+    const notificationSettingsOverlay =
+      document.getElementById("notificationSettingsOverlay");
+    const closeNotificationSettingsButton =
+      document.getElementById("closeNotificationSettingsButton");
+    const openSoundToggle =
+      document.getElementById("openSoundToggle");
+    const openVibrationToggle =
+      document.getElementById("openVibrationToggle");
+    const systemNotificationToggle =
+      document.getElementById("systemNotificationToggle");
+    const notificationCountSelect =
+      document.getElementById("notificationCountSelect");
+    const repeatNotificationToggle =
+      document.getElementById("repeatNotificationToggle");
+    const alertSoundSelect =
+      document.getElementById("alertSoundSelect");
+    const testOpenAlertButton =
+      document.getElementById("testOpenAlertButton");
+    const requestNotificationButton =
+      document.getElementById("requestNotificationButton");
+    const testSystemNotificationButton =
+      document.getElementById("testSystemNotificationButton");
+    const notificationSettingsStatus =
+      document.getElementById("notificationSettingsStatus");
+
     const timerMessage = document.getElementById("timerMessage");
     const recoveryHistoryList = document.getElementById("recoveryHistoryList");
 
@@ -1858,6 +2252,12 @@
     let activeMode = "work";
     let timerInterval = null;
     let activeTimer = null;
+    let pendingWorkEndReason = "manual";
+    let audioContext = null;
+    let timerSettings = loadTimerSettings();
+    timerSettings.nextWorkMinutes = 25;
+    timerSettings.autoStartNextWork = true;
+    saveTimerSettings();
     let editingScheduleId = null;
 
     let supabaseClient = null;
@@ -2290,6 +2690,366 @@
       timerMessage.hidden = true;
     }
 
+    function loadTimerSettings() {
+      const defaults = {
+        soundEnabled: true,
+        vibrationEnabled: true,
+        systemNotificationsEnabled: false,
+        notificationCount: 1,
+        repeatNotifications: false,
+        soundType: "soft",
+        nextWorkMinutes: 25,
+        autoStartNextWork: true
+      };
+
+      try {
+        const stored = JSON.parse(
+          localStorage.getItem(TIMER_SETTINGS_STORAGE_KEY)
+        );
+
+        return {
+          ...defaults,
+          ...(stored && typeof stored === "object" ? stored : {})
+        };
+      } catch {
+        return defaults;
+      }
+    }
+
+    function saveTimerSettings() {
+      try {
+        localStorage.setItem(
+          TIMER_SETTINGS_STORAGE_KEY,
+          JSON.stringify(timerSettings)
+        );
+      } catch {
+        // 端末設定なので、保存できなくてもタイマーは続ける。
+      }
+    }
+
+    function workLabelForMinutes(minutes) {
+      const labels = {
+        10: "まずは始める",
+        25: "短く集中",
+        60: "しっかり取り組む"
+      };
+
+      return labels[minutes] || `${minutes}分`;
+    }
+
+    function restLabelForMinutes(minutes) {
+      const labels = {
+        1: "一休み",
+        3: "短く休む",
+        5: "少し休む",
+        10: "短く休む",
+        20: "少し長めに休む"
+      };
+
+      return labels[minutes] || `${minutes}分休憩`;
+    }
+
+    function setNotificationStatus(message) {
+      notificationSettingsStatus.textContent = message;
+    }
+
+    function updateNotificationSettingsUI() {
+      openSoundToggle.checked = Boolean(timerSettings.soundEnabled);
+      openVibrationToggle.checked =
+        Boolean(timerSettings.vibrationEnabled);
+      systemNotificationToggle.checked =
+        Boolean(timerSettings.systemNotificationsEnabled);
+      notificationCountSelect.value =
+        String(timerSettings.notificationCount || 1);
+      repeatNotificationToggle.checked =
+        Boolean(timerSettings.repeatNotifications);
+      alertSoundSelect.value = timerSettings.soundType || "soft";
+
+      updateNextWorkChoiceUI();
+
+      if (!("Notification" in window)) {
+        requestNotificationButton.disabled = true;
+        systemNotificationToggle.disabled = true;
+        setNotificationStatus(
+          "このブラウザではシステム通知を利用できません。"
+        );
+        return;
+      }
+
+      const permission = Notification.permission;
+      requestNotificationButton.disabled = permission === "granted";
+      requestNotificationButton.textContent =
+        permission === "granted"
+          ? "通知は許可されています"
+          : "通知を許可する";
+
+      if (permission === "denied") {
+        setNotificationStatus(
+          "通知が拒否されています。iPhoneの設定から許可してください。"
+        );
+      } else if (permission === "granted") {
+        setNotificationStatus("システム通知を利用できます。");
+      } else {
+        setNotificationStatus(
+          "通知を使うには「通知を許可する」を押してください。"
+        );
+      }
+    }
+
+    function openNotificationSettings() {
+      updateNotificationSettingsUI();
+      notificationSettingsOverlay.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeNotificationSettings() {
+      notificationSettingsOverlay.hidden = true;
+
+      if (
+        activeTimerPanel.hidden &&
+        timerDecisionPanel.hidden
+      ) {
+        document.body.style.overflow = "";
+      }
+    }
+
+    function updateNextWorkChoiceUI() {
+      for (const button of nextWorkChoiceButtons) {
+        const selected =
+          Number(button.dataset.nextWorkMinutes) ===
+          Number(timerSettings.nextWorkMinutes);
+
+        button.setAttribute("aria-pressed", String(selected));
+      }
+
+    }
+
+    function selectNextWorkMinutes(minutes) {
+      timerSettings.nextWorkMinutes = Number(minutes) || 25;
+      timerSettings.autoStartNextWork = true;
+      saveTimerSettings();
+      updateNextWorkChoiceUI();
+    }
+
+    function primeAlertAudio() {
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContextClass) return;
+
+      if (!audioContext) {
+        audioContext = new AudioContextClass();
+      }
+
+      if (audioContext.state === "suspended") {
+        audioContext.resume().catch(() => {});
+      }
+    }
+
+    function playTone(frequency, startDelay, duration, volume = 0.12) {
+      if (!audioContext) return;
+
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const startAt = audioContext.currentTime + startDelay;
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, startAt);
+      gain.gain.setValueAtTime(0.0001, startAt);
+      gain.gain.exponentialRampToValueAtTime(
+        Math.max(0.001, volume),
+        startAt + 0.02
+      );
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        startAt + duration
+      );
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start(startAt);
+      oscillator.stop(startAt + duration + 0.03);
+    }
+
+    function playAlertSound() {
+      if (!timerSettings.soundEnabled) return;
+
+      primeAlertAudio();
+      if (!audioContext) return;
+
+      const type = timerSettings.soundType || "soft";
+
+      if (type === "bell") {
+        playTone(880, 0, 0.22, 0.15);
+        playTone(1320, 0.12, 0.35, 0.12);
+      } else if (type === "bird") {
+        playTone(740, 0, 0.12, 0.1);
+        playTone(990, 0.14, 0.12, 0.1);
+        playTone(820, 0.29, 0.18, 0.09);
+      } else {
+        playTone(523.25, 0, 0.3, 0.09);
+        playTone(659.25, 0.2, 0.42, 0.08);
+      }
+    }
+
+    function vibrateAlert() {
+      if (!timerSettings.vibrationEnabled) return false;
+      if (!navigator.vibrate) return false;
+
+      return navigator.vibrate([180, 100, 180]);
+    }
+
+    async function registerNotificationServiceWorker() {
+      if (!("serviceWorker" in navigator)) return null;
+
+      try {
+        return await navigator.serviceWorker.register(
+          "./service-worker.js",
+          { scope: "./" }
+        );
+      } catch (error) {
+        console.error("Service worker registration failed", error);
+        return null;
+      }
+    }
+
+    async function requestNotificationPermission() {
+      if (!("Notification" in window)) {
+        setNotificationStatus(
+          "このブラウザではシステム通知を利用できません。"
+        );
+        return false;
+      }
+
+      try {
+        const permission = await Notification.requestPermission();
+
+        if (permission === "granted") {
+          timerSettings.systemNotificationsEnabled = true;
+          systemNotificationToggle.checked = true;
+          saveTimerSettings();
+          updateNotificationSettingsUI();
+          return true;
+        }
+
+        timerSettings.systemNotificationsEnabled = false;
+        systemNotificationToggle.checked = false;
+        saveTimerSettings();
+        updateNotificationSettingsUI();
+        return false;
+      } catch (error) {
+        console.error(error);
+        setNotificationStatus(
+          "通知の許可画面を開けませんでした。ホーム画面から開いて再試行してください。"
+        );
+        return false;
+      }
+    }
+
+    async function showSystemNotification(title, body, tag = "timer") {
+      if (
+        !timerSettings.systemNotificationsEnabled ||
+        !("Notification" in window) ||
+        Notification.permission !== "granted"
+      ) {
+        return false;
+      }
+
+      try {
+        if ("serviceWorker" in navigator) {
+          const registration = await navigator.serviceWorker.ready;
+          await registration.showNotification(title, {
+            body,
+            icon: "./icon-192.png",
+            badge: "./icon-192.png",
+            tag,
+            renotify: true
+          });
+          return true;
+        }
+
+        return false;
+      } catch (error) {
+        console.error("Notification failed", error);
+        return false;
+      }
+    }
+
+    function sendCompletionNotification(mode) {
+      playAlertSound();
+      vibrateAlert();
+
+      if (!timerSettings.systemNotificationsEnabled) return;
+
+      const nextMinutes =
+        Number(timerSettings.nextWorkMinutes) || 25;
+
+      const title =
+        mode === "work"
+          ? "集中タイマーが終わりました"
+          : "休憩タイマーが終わりました";
+      const body =
+        mode === "work"
+          ? "休憩時間を選んでください。"
+          : timerSettings.autoStartNextWork
+            ? `${nextMinutes}分の集中タイマーを自動で始めます。`
+            : "次の作業を選んでください。";
+
+      const count = timerSettings.repeatNotifications
+        ? Math.max(1, Number(timerSettings.notificationCount) || 1)
+        : 1;
+
+      for (let index = 0; index < count; index += 1) {
+        setTimeout(() => {
+          showSystemNotification(
+            title,
+            body,
+            `timer-${Date.now()}-${index}`
+          );
+        }, index * 1600);
+      }
+    }
+
+    function testOpenAlert() {
+      playAlertSound();
+      const vibrated = vibrateAlert();
+
+      setNotificationStatus(
+        vibrated
+          ? "音・バイブをテストしました。"
+          : "音をテストしました。バイブ非対応の端末では振動しません。"
+      );
+    }
+
+    async function testSystemNotification() {
+      if (
+        !("Notification" in window) ||
+        Notification.permission !== "granted"
+      ) {
+        const allowed = await requestNotificationPermission();
+        if (!allowed) return;
+      }
+
+      timerSettings.systemNotificationsEnabled = true;
+      systemNotificationToggle.checked = true;
+      saveTimerSettings();
+      setNotificationStatus("3秒後にテスト通知を送ります。");
+
+      setTimeout(async () => {
+        const shown = await showSystemNotification(
+          "タイマー通知のテスト",
+          "通知はこのように届きます。",
+          `test-${Date.now()}`
+        );
+
+        setNotificationStatus(
+          shown
+            ? "テスト通知を送りました。"
+            : "通知を送れませんでした。端末の通知設定を確認してください。"
+        );
+      }, 3000);
+    }
+
     function resetTimerScreen(message = "") {
       if (timerInterval) {
         clearInterval(timerInterval);
@@ -2297,16 +3057,16 @@
       }
 
       activeTimer = null;
+      pendingWorkEndReason = "manual";
       document.body.classList.remove("timer-focus");
+      document.body.style.overflow = "";
       activeTimerPanel.classList.remove("paused");
       pauseTimerButton.textContent = "一時停止";
       timerSetup.hidden = false;
       activeTimerPanel.hidden = true;
       timerDecisionPanel.hidden = true;
-      afterRestPanel.hidden = true;
       customTimerPanel.hidden = true;
       timerTime.textContent = "00:00";
-      afterSleepiness.value = "";
 
       if (message) {
         timerMessage.textContent = message;
@@ -2316,7 +3076,20 @@
       }
     }
 
-    function startTimer(minutes, label) {
+    function updateActiveTimerModeUI() {
+      if (!activeTimer) return;
+
+      const isWork = activeTimer.mode === "work";
+
+      timerOverlayTitle.textContent = isWork ? "集中する" : "休憩中";
+      timerModeCaption.textContent = isWork ? "作業中" : "休憩中";
+      workTimerVisual.hidden = !isWork;
+      restTimerVisual.hidden = isWork;
+      nextWorkPanel.hidden = isWork;
+      updateNextWorkChoiceUI();
+    }
+
+    function startTimerForMode(mode, minutes, label) {
       const numericMinutes = Number(minutes);
 
       if (!Number.isFinite(numericMinutes) || numericMinutes < 1) {
@@ -2324,14 +3097,8 @@
         return;
       }
 
-      let before = null;
-      if (activeMode === "rest") {
-        before = Number(beforeSleepiness.value);
-        if (!before) {
-          alert("今の眠気を選んでください。");
-          return;
-        }
-      }
+      primeAlertAudio();
+      showMode(mode);
 
       if (timerInterval) {
         clearInterval(timerInterval);
@@ -2339,16 +3106,15 @@
 
       const startedAt = new Date();
       activeTimer = {
-        mode: activeMode,
+        mode,
         plannedMinutes: numericMinutes,
         initialPlannedMinutes: numericMinutes,
-        extensionCount: 0,
         label,
-        before,
         startedAt: startedAt.toISOString(),
         endTime: startedAt.getTime() + numericMinutes * 60 * 1000,
         isPaused: false,
         pausedAt: null,
+        expiredHandling: false,
         segments: [{
           startedAt: startedAt.toISOString(),
           finishedAt: null
@@ -2356,27 +3122,32 @@
       };
 
       document.body.classList.add("timer-focus");
-      timerOverlayTitle.textContent =
-        activeMode === "work" ? "集中する" : "休憩する";
-
       timerSetup.hidden = true;
       customTimerPanel.hidden = true;
-      afterRestPanel.hidden = true;
       timerDecisionPanel.hidden = true;
       timerMessage.hidden = true;
       activeTimerPanel.hidden = false;
 
       activeTimerPanel.classList.remove("paused");
       pauseTimerButton.textContent = "一時停止";
+      updateActiveTimerModeUI();
       updateTimerDisplay();
 
       timerInterval = setInterval(() => {
         updateTimerDisplay();
 
-        if (activeTimer && Date.now() >= activeTimer.endTime) {
+        if (
+          activeTimer &&
+          !activeTimer.isPaused &&
+          Date.now() >= activeTimer.endTime
+        ) {
           handleTimerExpired();
         }
-      }, 1000);
+      }, 500);
+    }
+
+    function startTimer(minutes, label) {
+      startTimerForMode(activeMode, minutes, label);
     }
 
     function updateTimerDisplay() {
@@ -2439,7 +3210,6 @@
           new Date(segment.finishedAt).getTime() -
           new Date(segment.startedAt).getTime();
 
-        // 1分未満の区間は「実際」にも記録しない。
         if (duration < 60 * 1000) return;
 
         const segmentAdded = addActualTimelineEntry({
@@ -2491,21 +3261,24 @@
       });
 
       activeTimerPanel.classList.remove("paused");
-      timerOverlayTitle.textContent =
-        activeTimer.mode === "work" ? "集中する" : "休憩する";
+      updateActiveTimerModeUI();
       pauseTimerButton.textContent = "一時停止";
 
       timerInterval = setInterval(() => {
         updateTimerDisplay();
 
-        if (activeTimer && Date.now() >= activeTimer.endTime) {
+        if (
+          activeTimer &&
+          !activeTimer.isPaused &&
+          Date.now() >= activeTimer.endTime
+        ) {
           handleTimerExpired();
         }
-      }, 1000);
+      }, 500);
     }
 
-    function handleTimerExpired() {
-      if (!activeTimer) return;
+    function prepareWorkFinish(endReason) {
+      if (!activeTimer || activeTimer.mode !== "work") return;
 
       if (timerInterval) {
         clearInterval(timerInterval);
@@ -2513,53 +3286,40 @@
       }
 
       closeCurrentTimerSegment();
-
-      if (activeTimer.mode === "rest") {
-        finishRestTimer();
-        return;
-      }
+      activeTimer.expiredHandling = true;
+      pendingWorkEndReason = endReason;
+      timerTime.textContent = "00:00";
 
       activeTimerPanel.hidden = true;
       timerDecisionPanel.hidden = false;
-      updateExtensionDecision();
+
+      workFinishedSummary.textContent =
+        endReason === "scheduled"
+          ? "予定時間で停止しました。休憩時間を選ぶと、すぐに休憩が始まります。"
+          : "ここで作業を区切りました。休憩時間を選べます。";
+
     }
 
-    function updateExtensionDecision() {
-      if (!activeTimer) return;
+    function handleTimerExpired() {
+      if (!activeTimer || activeTimer.expiredHandling) return;
 
-      const count = activeTimer.extensionCount || 0;
-      extensionCount.textContent = `延長 ${count} / 2回`;
-      extendFiveMinutesButton.disabled = count >= 2;
-      extendFiveMinutesButton.textContent =
-        count >= 2 ? "延長上限です" : "5分だけ延長";
-    }
+      activeTimer.expiredHandling = true;
 
-    function extendWorkTimer() {
-      if (!activeTimer || activeTimer.mode !== "work") return;
-      if ((activeTimer.extensionCount || 0) >= 2) return;
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
 
-      activeTimer.extensionCount += 1;
-      activeTimer.endTime = Date.now() + 5 * 60 * 1000;
-      activeTimer.isPaused = false;
-      activeTimer.pausedAt = null;
-      activeTimer.segments.push({
-        startedAt: new Date().toISOString(),
-        finishedAt: null
-      });
+      closeCurrentTimerSegment();
+      timerTime.textContent = "00:00";
+      sendCompletionNotification(activeTimer.mode);
 
-      timerDecisionPanel.hidden = true;
-      activeTimerPanel.hidden = false;
-      activeTimerPanel.classList.remove("paused");
-      timerOverlayTitle.textContent = "集中する";
-      pauseTimerButton.textContent = "一時停止";
-      updateTimerDisplay();
+      if (activeTimer.mode === "rest") {
+        finishRestTimer(true);
+        return;
+      }
 
-      timerInterval = setInterval(() => {
-        updateTimerDisplay();
-        if (activeTimer && Date.now() >= activeTimer.endTime) {
-          handleTimerExpired();
-        }
-      }, 1000);
+      prepareWorkFinish("scheduled");
     }
 
     function saveWorkSession(endReason) {
@@ -2572,20 +3332,21 @@
         return { skipped: true };
       }
 
-      const finishedAt = new Date().toISOString();
+      const lastFinishedSegment = [...activeTimer.segments]
+        .reverse()
+        .find(segment => segment.finishedAt);
+
+      const finishedAt =
+        lastFinishedSegment?.finishedAt || new Date().toISOString();
       const actualMinutes = calculateActualMinutes();
-      const extensionTotal = (activeTimer.extensionCount || 0) * 5;
-      const plannedTotal = activeTimer.initialPlannedMinutes + extensionTotal;
+      const plannedTotal = activeTimer.initialPlannedMinutes;
 
       let status = "途中で終了";
       let statusType = "early";
 
-      if (endReason === "scheduled" && activeTimer.extensionCount === 0) {
+      if (endReason === "scheduled") {
         status = "予定どおり終了";
         statusType = "onTime";
-      } else if (activeTimer.extensionCount > 0) {
-        status = `5分延長 × ${activeTimer.extensionCount}`;
-        statusType = "extended";
       }
 
       const record = {
@@ -2594,7 +3355,6 @@
         initialPlannedMinutes: activeTimer.initialPlannedMinutes,
         plannedTotalMinutes: plannedTotal,
         actualMinutes,
-        extensionCount: activeTimer.extensionCount || 0,
         status,
         statusType,
         startedAt: activeTimer.startedAt,
@@ -2615,33 +3375,78 @@
       return record;
     }
 
-    function endWorkSession(endReason) {
-      const record = saveWorkSession(endReason);
-      if (!record) return;
+    function saveRestSession() {
+      if (!activeTimer || activeTimer.mode !== "rest") return null;
 
-      if (record.skipped) {
-        resetTimerScreen("1分未満のため記録しませんでした。");
-        return;
+      closeCurrentTimerSegment();
+      const activeMilliseconds = calculateActiveMilliseconds();
+
+      if (activeMilliseconds < 60 * 1000) {
+        return { skipped: true };
       }
 
-      let message = `約${record.actualMinutes}分、作業しました。`;
-      if (record.statusType === "onTime") {
-        message += " 予定どおり止まれました。";
-      } else if (record.statusType === "extended") {
-        message += ` 5分延長を${record.extensionCount}回して終了しました。`;
-      } else {
-        message += " 途中で区切りました。";
+      const lastFinishedSegment = [...activeTimer.segments]
+        .reverse()
+        .find(segment => segment.finishedAt);
+
+      const record = {
+        id: Date.now(),
+        type: "rest",
+        label: activeTimer.label,
+        plannedMinutes: activeTimer.plannedMinutes,
+        actualMinutes: calculateActualMinutes(),
+        startedAt: activeTimer.startedAt,
+        finishedAt:
+          lastFinishedSegment?.finishedAt || new Date().toISOString(),
+        segments: activeTimer.segments.map(segment => ({ ...segment }))
+      };
+
+      const records = loadArray(RECOVERY_STORAGE_KEY);
+      records.push(record);
+      saveArray(RECOVERY_STORAGE_KEY, records);
+
+      record.timelineAdded = addActualTimelineSegments(
+        record.segments,
+        "休憩",
+        `rest-${record.id}`
+      );
+
+      return record;
+    }
+
+    function completeWorkAndStartBreak(minutes) {
+      const breakMinutes = Number(minutes);
+      const record = saveWorkSession(pendingWorkEndReason);
+
+      renderWorkHistory();
+
+      if (record && !record.skipped) {
+        renderSchedule();
       }
 
-      if (record.timelineAdded) {
-        message += " 「1日の管理」の実際にも反映しました。";
+      startTimerForMode(
+        "rest",
+        breakMinutes,
+        restLabelForMinutes(breakMinutes)
+      );
+    }
+
+    function finishWorkWithoutBreak() {
+      const record = saveWorkSession(pendingWorkEndReason);
+      let message = "作業を終了しました。";
+
+      if (record?.skipped) {
+        message = "1分未満のため記録しませんでした。";
+      } else if (record) {
+        message = `約${record.actualMinutes}分、作業しました。`;
       }
 
       resetTimerScreen(message);
       renderWorkHistory();
+      renderSchedule();
     }
 
-    function finishRestTimer() {
+    function finishRestTimer(expired = false) {
       if (!activeTimer || activeTimer.mode !== "rest") return;
 
       if (timerInterval) {
@@ -2650,86 +3455,46 @@
       }
 
       closeCurrentTimerSegment();
-      activeTimer.finishedAt = new Date().toISOString();
-      activeTimer.actualMilliseconds = calculateActiveMilliseconds();
-      activeTimer.actualMinutes = calculateActualMinutes();
+      const record = saveRestSession();
+      const nextMinutes = Number(timerSettings.nextWorkMinutes) || 25;
+      const shouldAutoStart = timerSettings.autoStartNextWork;
 
-      if (activeTimer.actualMilliseconds < 60 * 1000) {
-        beforeSleepiness.value = "";
-        resetTimerScreen("1分未満のため記録しませんでした。");
+      renderRecoveryHistory();
+      renderSchedule();
+
+      if (shouldAutoStart) {
+        startTimerForMode(
+          "work",
+          nextMinutes,
+          workLabelForMinutes(nextMinutes)
+        );
         return;
       }
 
-      activeTimerPanel.hidden = true;
-      timerDecisionPanel.hidden = true;
-      afterRestPanel.hidden = false;
-      afterSleepiness.focus();
-    }
+      const message = record?.skipped
+        ? "1分未満のため休憩記録を残しませんでした。"
+        : expired
+          ? "休憩が終わりました。"
+          : "休憩を終了しました。";
 
+      resetTimerScreen(message);
+      showMode("work");
+    }
 
     function finishTimerManually() {
       if (!activeTimer) return;
 
       if (activeTimer.mode === "rest") {
-        finishRestTimer();
+        finishRestTimer(false);
       } else {
-        endWorkSession("manual");
+        prepareWorkFinish("manual");
       }
     }
 
     function cancelTimer() {
-      resetTimerScreen("タイマーを取り消しました。記録は保存されていません。");
-    }
-
-    function saveRecovery() {
-      if (!activeTimer || activeTimer.mode !== "rest") return;
-
-      const after = Number(afterSleepiness.value);
-      if (!after) {
-        alert("休んだ後の眠気を選んでください。");
-        return;
-      }
-
-      const record = {
-        id: Date.now(),
-        type: "rest",
-        label: activeTimer.label,
-        before: activeTimer.before,
-        after,
-        plannedMinutes: activeTimer.plannedMinutes,
-        actualMinutes: activeTimer.actualMinutes,
-        startedAt: activeTimer.startedAt,
-        finishedAt: activeTimer.finishedAt,
-        segments: activeTimer.segments.map(segment => ({ ...segment }))
-      };
-
-      const records = loadArray(RECOVERY_STORAGE_KEY);
-      records.push(record);
-      saveArray(RECOVERY_STORAGE_KEY, records);
-
-      const timelineAdded = addActualTimelineSegments(
-        record.segments,
-        "休憩",
-        `rest-${record.id}`
+      resetTimerScreen(
+        "タイマーを取り消しました。記録は保存されていません。"
       );
-
-      const difference = activeTimer.before - after;
-      let message = `約${activeTimer.actualMinutes}分休憩しました。`;
-      if (difference > 0) {
-        message += ` 眠気が${difference}段階下がりました。`;
-      } else if (difference === 0) {
-        message += " 眠気は変わりませんでした。";
-      } else {
-        message += ` 眠気が${Math.abs(difference)}段階上がりました。`;
-      }
-
-      if (timelineAdded) {
-        message += " 「1日の管理」の実際にも反映しました。";
-      }
-
-      beforeSleepiness.value = "";
-      resetTimerScreen(message);
-      renderRecoveryHistory();
     }
 
     function renderRecoveryHistory() {
@@ -2743,7 +3508,7 @@
       if (records.length === 0) {
         const item = document.createElement("li");
         item.className = "empty";
-        item.textContent = "まだ回復の記録はありません。";
+        item.textContent = "まだ休憩の記録はありません。";
         recoveryHistoryList.appendChild(item);
         return;
       }
@@ -2757,14 +3522,10 @@
 
         const restTime = document.createElement("span");
         restTime.className = "recovery-detail";
-        restTime.textContent = `約${Number(record.actualMinutes) || 0}分休憩`;
+        restTime.textContent =
+          `約${Number(record.actualMinutes) || 0}分休憩`;
 
-        const sleepiness = document.createElement("span");
-        sleepiness.className = "recovery-detail";
-        sleepiness.textContent =
-          `眠気 ${record.before ?? "—"} → ${record.after ?? "—"}`;
-
-        item.append(date, restTime, sleepiness);
+        item.append(date, restTime);
         recoveryHistoryList.appendChild(item);
       }
     }
@@ -3563,12 +4324,113 @@
     finishTimerButton.addEventListener("click", finishTimerManually);
     pauseTimerButton.addEventListener("click", togglePauseTimer);
     timerOverlayCloseButton.addEventListener("click", cancelTimer);
-    stopOnTimeButton.addEventListener("click", () => endWorkSession("scheduled"));
-    extendFiveMinutesButton.addEventListener("click", extendWorkTimer);
-    saveRecoveryButton.addEventListener("click", saveRecovery);
-    cancelRecoveryButton.addEventListener("click", () => {
-      beforeSleepiness.value = "";
-      resetTimerScreen("休憩記録を保存せず戻りました。");
+    finishWithoutBreakButton.addEventListener(
+      "click",
+      finishWorkWithoutBreak
+    );
+
+    for (const button of breakChoiceButtons) {
+      button.addEventListener("click", () => {
+        completeWorkAndStartBreak(
+          Number(button.dataset.breakMinutes)
+        );
+      });
+    }
+
+    for (const button of nextWorkChoiceButtons) {
+      button.addEventListener("click", () => {
+        selectNextWorkMinutes(
+          Number(button.dataset.nextWorkMinutes)
+        );
+      });
+    }
+
+    openTimerSettingsButton.addEventListener(
+      "click",
+      openNotificationSettings
+    );
+    closeNotificationSettingsButton.addEventListener(
+      "click",
+      closeNotificationSettings
+    );
+
+    openSoundToggle.addEventListener("change", () => {
+      timerSettings.soundEnabled = openSoundToggle.checked;
+      saveTimerSettings();
+    });
+
+    openVibrationToggle.addEventListener("change", () => {
+      timerSettings.vibrationEnabled =
+        openVibrationToggle.checked;
+      saveTimerSettings();
+    });
+
+    systemNotificationToggle.addEventListener(
+      "change",
+      async () => {
+        if (systemNotificationToggle.checked) {
+          const allowed = await requestNotificationPermission();
+          timerSettings.systemNotificationsEnabled = allowed;
+        } else {
+          timerSettings.systemNotificationsEnabled = false;
+        }
+
+        saveTimerSettings();
+        updateNotificationSettingsUI();
+      }
+    );
+
+    notificationCountSelect.addEventListener("change", () => {
+      timerSettings.notificationCount =
+        Number(notificationCountSelect.value) || 1;
+      saveTimerSettings();
+    });
+
+    repeatNotificationToggle.addEventListener("change", () => {
+      timerSettings.repeatNotifications =
+        repeatNotificationToggle.checked;
+      saveTimerSettings();
+    });
+
+    alertSoundSelect.addEventListener("change", () => {
+      timerSettings.soundType = alertSoundSelect.value;
+      saveTimerSettings();
+      primeAlertAudio();
+      playAlertSound();
+    });
+
+    testOpenAlertButton.addEventListener(
+      "click",
+      testOpenAlert
+    );
+    requestNotificationButton.addEventListener(
+      "click",
+      requestNotificationPermission
+    );
+    testSystemNotificationButton.addEventListener(
+      "click",
+      testSystemNotification
+    );
+
+    document.addEventListener("visibilitychange", () => {
+      if (
+        document.visibilityState === "visible" &&
+        activeTimer &&
+        !activeTimer.isPaused &&
+        Date.now() >= activeTimer.endTime
+      ) {
+        handleTimerExpired();
+      }
+    });
+
+    window.addEventListener("focus", () => {
+      if (
+        activeTimer &&
+        !activeTimer.isPaused &&
+        Date.now() >= activeTimer.endTime
+      ) {
+        handleTimerExpired();
+      }
     });
 
     closeScheduleEditButton.addEventListener(
@@ -3654,6 +4516,8 @@
 
     showMode("work");
     showTab(storedTab);
+    updateNotificationSettingsUI();
+    registerNotificationServiceWorker();
     renderRecoveryHistory();
     renderSchedule();
     renderTaskRecords();
