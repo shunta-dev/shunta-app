@@ -1728,10 +1728,10 @@
 
           <div class="sync-actions" style="margin-top: 15px">
             <button id="refreshFromCloudButton" class="primary" type="button">
-              クラウドから最新状態を読み込む
+              クラウドから記録を復元
             </button>
             <button id="saveToCloudButton" class="secondary" type="button">
-              この端末の状態をクラウドへ保存
+              この端末の記録をクラウドへ保存
             </button>
             <button id="signOutSyncButton" class="secondary" type="button">
               ログアウト
@@ -2955,29 +2955,135 @@
       renderWorkHistory();
     }
 
-    function applyCloudState(cloudData) {
-      if (!cloudData || typeof cloudData !== "object") return;
+    function normalizeCloudState(value) {
+      if (!value) return null;
 
+      if (typeof value === "string") {
+        try {
+          return JSON.parse(value);
+        } catch {
+          return null;
+        }
+      }
+
+      return typeof value === "object" ? value : null;
+    }
+
+    function countStoredState(state) {
+      const normalized = normalizeCloudState(state) || {};
+
+      const taskCount = Array.isArray(
+        normalized[TASK_STORAGE_KEY]
+      )
+        ? normalized[TASK_STORAGE_KEY].length
+        : 0;
+
+      const restCount = Array.isArray(
+        normalized[RECOVERY_STORAGE_KEY]
+      )
+        ? normalized[RECOVERY_STORAGE_KEY].length
+        : 0;
+
+      const workCount = Array.isArray(
+        normalized[WORK_STORAGE_KEY]
+      )
+        ? normalized[WORK_STORAGE_KEY].length
+        : 0;
+
+      const scheduleCount = Array.isArray(
+        normalized[SCHEDULE_STORAGE_KEY]
+      )
+        ? normalized[SCHEDULE_STORAGE_KEY].length
+        : 0;
+
+      return {
+        taskCount,
+        restCount,
+        workCount,
+        scheduleCount,
+        total:
+          taskCount +
+          restCount +
+          workCount +
+          scheduleCount
+      };
+    }
+
+    function describeStoredState(state) {
+      const counts = countStoredState(state);
+      const parts = [];
+
+      if (counts.workCount > 0) {
+        parts.push(`作業${counts.workCount}件`);
+      }
+
+      if (counts.scheduleCount > 0) {
+        parts.push(`1日の管理${counts.scheduleCount}件`);
+      }
+
+      if (counts.taskCount > 0) {
+        parts.push(`積み重ね${counts.taskCount}件`);
+      }
+
+      if (counts.restCount > 0) {
+        parts.push(`過去の休憩${counts.restCount}件`);
+      }
+
+      return parts.length > 0
+        ? parts.join("・")
+        : "記録0件";
+    }
+
+    function saveLocalSafetyBackup() {
+      try {
+        localStorage.setItem(
+          "tsumikasane-before-cloud-restore-v1",
+          JSON.stringify({
+            backed_up_at: new Date().toISOString(),
+            data: collectLocalState()
+          })
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    function applyCloudState(cloudData) {
+      const normalized =
+        normalizeCloudState(cloudData);
+
+      if (!normalized) {
+        throw new Error(
+          "クラウドの記録形式を読み取れませんでした。"
+        );
+      }
+
+      saveLocalSafetyBackup();
       applyingCloudState = true;
 
       try {
         for (const key of CLOUD_STORAGE_KEYS) {
-          const records = cloudData[key];
+          const records = normalized[key];
 
-          if (Array.isArray(records)) {
-            localStorage.setItem(key, JSON.stringify(records));
-          }
+          localStorage.setItem(
+            key,
+            JSON.stringify(
+              Array.isArray(records) ? records : []
+            )
+          );
         }
 
         localStorage.setItem(
           LOCAL_UPDATED_AT_KEY,
-          cloudData.saved_at || new Date().toISOString()
+          normalized.saved_at ||
+            new Date().toISOString()
         );
       } finally {
         applyingCloudState = false;
       }
 
       renderAllStoredData();
+      return countStoredState(normalized);
     }
 
     function scheduleCloudSync() {
@@ -2997,6 +3103,23 @@
       }, 700);
     }
 
+    async function fetchCloudState() {
+      if (!currentSyncUser || !supabaseClient) {
+        return {
+          data: null,
+          error: {
+            message: "ログインしていません。"
+          }
+        };
+      }
+
+      return supabaseClient
+        .from("app_state")
+        .select("data, updated_at")
+        .eq("user_id", currentSyncUser.id)
+        .maybeSingle();
+    }
+
     async function pushLocalStateToCloud() {
       if (!currentSyncUser || !supabaseClient) return false;
 
@@ -3005,6 +3128,34 @@
       setSyncState("syncing", "クラウドへ保存しています…");
 
       const snapshot = collectLocalState();
+      const localCounts = countStoredState(snapshot);
+      const cloudResult = await fetchCloudState();
+
+      if (cloudResult.error) {
+        console.error(cloudResult.error);
+        setSyncState(
+          "error",
+          `保存前の確認に失敗しました：${cloudResult.error.message}`
+        );
+        return false;
+      }
+
+      const cloudState =
+        normalizeCloudState(cloudResult.data?.data);
+      const cloudCounts =
+        countStoredState(cloudState);
+
+      if (
+        localCounts.total === 0 &&
+        cloudCounts.total > 0
+      ) {
+        setSyncState(
+          "error",
+          `端末の記録が空なので保存を止めました。クラウドには${describeStoredState(cloudState)}残っています。先に「クラウドから記録を復元」を押してください。`
+        );
+        return false;
+      }
+
       const { error } = await supabaseClient
         .from("app_state")
         .upsert(
@@ -3025,20 +3176,23 @@
         return false;
       }
 
-      setSyncState("synced", "クラウドと同期しました。");
+      setSyncState(
+        "synced",
+        `${describeStoredState(snapshot)}をクラウドへ保存しました。`
+      );
       return true;
     }
 
-    async function pullCloudState({ createWhenMissing = true } = {}) {
+    async function pullCloudState() {
       if (!currentSyncUser || !supabaseClient) return false;
 
-      setSyncState("syncing", "クラウドから読み込んでいます…");
+      setSyncState(
+        "syncing",
+        "クラウドの記録を確認しています…"
+      );
 
-      const { data, error } = await supabaseClient
-        .from("app_state")
-        .select("data, updated_at")
-        .eq("user_id", currentSyncUser.id)
-        .maybeSingle();
+      const { data, error } =
+        await fetchCloudState();
 
       if (error) {
         console.error(error);
@@ -3050,16 +3204,50 @@
       }
 
       if (!data) {
-        if (createWhenMissing) {
-          return pushLocalStateToCloud();
-        }
-
-        setSyncState("synced", "クラウドに記録はまだありません。");
+        setSyncState(
+          "synced",
+          "クラウドに保存された記録はありません。端末のデータを自動保存せず待機しています。"
+        );
         return true;
       }
 
-      applyCloudState(data.data);
-      setSyncState("synced", "クラウドの最新状態を読み込みました。");
+      const cloudState =
+        normalizeCloudState(data.data);
+
+      if (!cloudState) {
+        setSyncState(
+          "error",
+          "クラウドの記録形式を読み取れませんでした。"
+        );
+        return false;
+      }
+
+      const counts =
+        countStoredState(cloudState);
+
+      if (counts.total === 0) {
+        setSyncState(
+          "synced",
+          "クラウドの記録は空です。端末の状態は変更していません。"
+        );
+        return true;
+      }
+
+      try {
+        applyCloudState(cloudState);
+      } catch (errorApply) {
+        console.error(errorApply);
+        setSyncState(
+          "error",
+          `復元できませんでした：${errorApply.message}`
+        );
+        return false;
+      }
+
+      setSyncState(
+        "synced",
+        `${describeStoredState(cloudState)}をクラウドから復元しました。`
+      );
       return true;
     }
 
@@ -3076,9 +3264,7 @@
       currentSyncUser = user;
       showSyncPanels(true);
 
-      activeUserSetupPromise = pullCloudState({
-        createWhenMissing: true
-      });
+      activeUserSetupPromise = pullCloudState();
 
       const result = await activeUserSetupPromise;
       activeUserSetupPromise = null;
@@ -3247,9 +3433,7 @@
           return;
         }
 
-        await pullCloudState({
-          createWhenMissing: true
-        });
+        await pullCloudState();
       }
     }
 
@@ -4878,7 +5062,7 @@
     signOutSyncButton.addEventListener("click", signOutFromSync);
 
     refreshFromCloudButton.addEventListener("click", async () => {
-      await pullCloudState({ createWhenMissing: true });
+      await pullCloudState();
     });
 
     saveToCloudButton.addEventListener("click", async () => {
