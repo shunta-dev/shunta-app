@@ -2749,6 +2749,35 @@
       return labels[minutes] || `${minutes}分休憩`;
     }
 
+    function isIOSDevice() {
+      return /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        (
+          navigator.platform === "MacIntel" &&
+          navigator.maxTouchPoints > 1
+        );
+    }
+
+    function isStandaloneApp() {
+      return window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true;
+    }
+
+    function notificationUnavailableReason() {
+      if (isIOSDevice() && !isStandaloneApp()) {
+        return "iPhoneでは、Safariからホーム画面に追加したアプリを開いて通知を設定してください。";
+      }
+
+      if (!("Notification" in window)) {
+        return "このブラウザでは通知機能を利用できません。";
+      }
+
+      if (!("serviceWorker" in navigator)) {
+        return "このブラウザでは通知に必要なService Workerを利用できません。";
+      }
+
+      return "";
+    }
+
     function setNotificationStatus(message) {
       notificationSettingsStatus.textContent = message;
     }
@@ -2767,31 +2796,36 @@
 
       updateNextWorkChoiceUI();
 
-      if (!("Notification" in window)) {
-        requestNotificationButton.disabled = true;
-        systemNotificationToggle.disabled = true;
-        setNotificationStatus(
-          "このブラウザではシステム通知を利用できません。"
-        );
+      // 押せない状態にせず、タップした時に理由を表示する。
+      systemNotificationToggle.disabled = false;
+      requestNotificationButton.disabled = false;
+
+      const unavailableReason = notificationUnavailableReason();
+
+      if (unavailableReason) {
+        requestNotificationButton.textContent = "通知を使える状態にする";
+        setNotificationStatus(unavailableReason);
         return;
       }
 
       const permission = Notification.permission;
-      requestNotificationButton.disabled = permission === "granted";
-      requestNotificationButton.textContent =
-        permission === "granted"
-          ? "通知は許可されています"
-          : "通知を許可する";
 
-      if (permission === "denied") {
+      if (permission === "granted") {
+        requestNotificationButton.textContent = "通知は許可されています";
         setNotificationStatus(
-          "通知が拒否されています。iPhoneの設定から許可してください。"
+          timerSettings.systemNotificationsEnabled
+            ? "通知を利用中です。下のテストで確認できます。"
+            : "通知は許可済みです。「通知を使う」をオンにしてください。"
         );
-      } else if (permission === "granted") {
-        setNotificationStatus("システム通知を利用できます。");
-      } else {
+      } else if (permission === "denied") {
+        requestNotificationButton.textContent = "通知設定を確認する";
         setNotificationStatus(
-          "通知を使うには「通知を許可する」を押してください。"
+          "通知が拒否されています。iPhoneの設定 → 通知 → Shunta Appから許可してください。"
+        );
+      } else {
+        requestNotificationButton.textContent = "通知を許可する";
+        setNotificationStatus(
+          "「通知を使う」または「通知を許可する」を押してください。"
         );
       }
     }
@@ -2903,10 +2937,17 @@
       if (!("serviceWorker" in navigator)) return null;
 
       try {
-        return await navigator.serviceWorker.register(
-          "./service-worker.js",
-          { scope: "./" }
-        );
+        const registration =
+          await navigator.serviceWorker.register(
+            "./service-worker.js",
+            {
+              scope: "./",
+              updateViaCache: "none"
+            }
+          );
+
+        await registration.update();
+        return registration;
       } catch (error) {
         console.error("Service worker registration failed", error);
         return null;
@@ -2914,33 +2955,64 @@
     }
 
     async function requestNotificationPermission() {
-      if (!("Notification" in window)) {
+      const unavailableReason = notificationUnavailableReason();
+
+      if (unavailableReason) {
+        timerSettings.systemNotificationsEnabled = false;
+        systemNotificationToggle.checked = false;
+        saveTimerSettings();
+        setNotificationStatus(unavailableReason);
+        return false;
+      }
+
+      if (Notification.permission === "denied") {
+        timerSettings.systemNotificationsEnabled = false;
+        systemNotificationToggle.checked = false;
+        saveTimerSettings();
         setNotificationStatus(
-          "このブラウザではシステム通知を利用できません。"
+          "通知が拒否されています。iPhoneの設定 → 通知 → Shunta Appから許可してください。"
         );
         return false;
       }
 
       try {
-        const permission = await Notification.requestPermission();
+        const registration =
+          await registerNotificationServiceWorker();
 
-        if (permission === "granted") {
-          timerSettings.systemNotificationsEnabled = true;
-          systemNotificationToggle.checked = true;
-          saveTimerSettings();
-          updateNotificationSettingsUI();
+        if (!registration) {
+          throw new Error("Service Workerを登録できませんでした。");
+        }
+
+        // 必ずボタン・スイッチ操作から直接呼ぶ。
+        const permission =
+          Notification.permission === "granted"
+            ? "granted"
+            : await Notification.requestPermission();
+
+        const allowed = permission === "granted";
+        timerSettings.systemNotificationsEnabled = allowed;
+        systemNotificationToggle.checked = allowed;
+        saveTimerSettings();
+        updateNotificationSettingsUI();
+
+        if (allowed) {
+          setNotificationStatus(
+            "通知をオンにしました。下の通知テストで確認してください。"
+          );
           return true;
         }
 
-        timerSettings.systemNotificationsEnabled = false;
-        systemNotificationToggle.checked = false;
-        saveTimerSettings();
-        updateNotificationSettingsUI();
+        setNotificationStatus(
+          "通知が許可されませんでした。端末の通知設定を確認してください。"
+        );
         return false;
       } catch (error) {
         console.error(error);
+        timerSettings.systemNotificationsEnabled = false;
+        systemNotificationToggle.checked = false;
+        saveTimerSettings();
         setNotificationStatus(
-          "通知の許可画面を開けませんでした。ホーム画面から開いて再試行してください。"
+          `通知を設定できませんでした：${error.message || error}`
         );
         return false;
       }
@@ -3022,17 +3094,9 @@
     }
 
     async function testSystemNotification() {
-      if (
-        !("Notification" in window) ||
-        Notification.permission !== "granted"
-      ) {
-        const allowed = await requestNotificationPermission();
-        if (!allowed) return;
-      }
+      const allowed = await requestNotificationPermission();
+      if (!allowed) return;
 
-      timerSettings.systemNotificationsEnabled = true;
-      systemNotificationToggle.checked = true;
-      saveTimerSettings();
       setNotificationStatus("3秒後にテスト通知を送ります。");
 
       setTimeout(async () => {
@@ -3045,7 +3109,7 @@
         setNotificationStatus(
           shown
             ? "テスト通知を送りました。"
-            : "通知を送れませんでした。端末の通知設定を確認してください。"
+            : "通知を送れませんでした。アプリを閉じて開き直してから再試行してください。"
         );
       }, 3000);
     }
@@ -4370,13 +4434,15 @@
       async () => {
         if (systemNotificationToggle.checked) {
           const allowed = await requestNotificationPermission();
-          timerSettings.systemNotificationsEnabled = allowed;
+
+          if (!allowed) {
+            systemNotificationToggle.checked = false;
+          }
         } else {
           timerSettings.systemNotificationsEnabled = false;
+          saveTimerSettings();
+          updateNotificationSettingsUI();
         }
-
-        saveTimerSettings();
-        updateNotificationSettingsUI();
       }
     );
 
