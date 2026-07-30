@@ -36,7 +36,12 @@
     }
 
     html,
-    body,
+    body {
+      touch-action: pan-x pan-y;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
     button,
     input,
     select,
@@ -1834,12 +1839,6 @@
             </button>
           </div>
 
-          <section class="section">
-            <div class="section-heading">
-              <h2>休憩の記録</h2>
-            </div>
-            <ul id="recoveryHistoryList"></ul>
-          </section>
         </div>
       </div>
 
@@ -2109,6 +2108,64 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    function installZoomGuards() {
+      const preventGesture = event => {
+        event.preventDefault();
+      };
+
+      document.addEventListener(
+        "gesturestart",
+        preventGesture,
+        { passive: false }
+      );
+      document.addEventListener(
+        "gesturechange",
+        preventGesture,
+        { passive: false }
+      );
+      document.addEventListener(
+        "gestureend",
+        preventGesture,
+        { passive: false }
+      );
+
+      document.addEventListener(
+        "touchmove",
+        event => {
+          if (event.touches && event.touches.length > 1) {
+            event.preventDefault();
+          }
+        },
+        { passive: false }
+      );
+
+      document.addEventListener(
+        "dblclick",
+        event => {
+          event.preventDefault();
+        },
+        { passive: false }
+      );
+
+      let lastTouchEnd = 0;
+
+      document.addEventListener(
+        "touchend",
+        event => {
+          const now = Date.now();
+
+          if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+          }
+
+          lastTouchEnd = now;
+        },
+        { passive: false }
+      );
+    }
+
+    installZoomGuards();
+
     const TASK_STORAGE_KEY = "tsumikasane-records-v1";
     const RECOVERY_STORAGE_KEY = "tsumikasane-recovery-v1";
     const WORK_STORAGE_KEY = "tsumikasane-work-v1";
@@ -2218,7 +2275,6 @@
       document.getElementById("notificationSettingsStatus");
 
     const timerMessage = document.getElementById("timerMessage");
-    const recoveryHistoryList = document.getElementById("recoveryHistoryList");
 
     const scheduleDate = document.getElementById("scheduleDate");
     const previousDayButton = document.getElementById("previousDayButton");
@@ -2372,7 +2428,6 @@
     }
 
     function renderAllStoredData() {
-      renderRecoveryHistory();
       renderSchedule();
       renderTaskRecords();
       renderWorkHistory();
@@ -3462,77 +3517,6 @@
       return record;
     }
 
-    function saveRestSession() {
-      if (!activeTimer || activeTimer.mode !== "rest") return null;
-
-      closeCurrentTimerSegment();
-      const activeMilliseconds = calculateActiveMilliseconds();
-
-      if (activeMilliseconds < 60 * 1000) {
-        return { skipped: true };
-      }
-
-      const lastFinishedSegment = [...activeTimer.segments]
-        .reverse()
-        .find(segment => segment.finishedAt);
-
-      const record = {
-        id: Date.now(),
-        type: "rest",
-        label: activeTimer.label,
-        plannedMinutes: activeTimer.plannedMinutes,
-        actualMinutes: calculateActualMinutes(),
-        startedAt: activeTimer.startedAt,
-        finishedAt:
-          lastFinishedSegment?.finishedAt || new Date().toISOString(),
-        segments: activeTimer.segments.map(segment => ({ ...segment }))
-      };
-
-      const records = loadArray(RECOVERY_STORAGE_KEY);
-      records.push(record);
-      saveArray(RECOVERY_STORAGE_KEY, records);
-
-      record.timelineAdded = addActualTimelineSegments(
-        record.segments,
-        "休憩",
-        `rest-${record.id}`
-      );
-
-      return record;
-    }
-
-    function completeWorkAndStartBreak(minutes) {
-      const breakMinutes = Number(minutes);
-      const record = saveWorkSession(pendingWorkEndReason);
-
-      renderWorkHistory();
-
-      if (record && !record.skipped) {
-        renderSchedule();
-      }
-
-      startTimerForMode(
-        "rest",
-        breakMinutes,
-        restLabelForMinutes(breakMinutes)
-      );
-    }
-
-    function finishWorkWithoutBreak() {
-      const record = saveWorkSession(pendingWorkEndReason);
-      let message = "作業を終了しました。";
-
-      if (record?.skipped) {
-        message = "1分未満のため記録しませんでした。";
-      } else if (record) {
-        message = `約${record.actualMinutes}分、作業しました。`;
-      }
-
-      resetTimerScreen(message);
-      renderWorkHistory();
-      renderSchedule();
-    }
-
     function finishRestTimer(expired = false) {
       if (!activeTimer || activeTimer.mode !== "rest") return;
 
@@ -3542,12 +3526,11 @@
       }
 
       closeCurrentTimerSegment();
-      const record = saveRestSession();
-      const nextMinutes = Number(timerSettings.nextWorkMinutes) || 25;
-      const shouldAutoStart = timerSettings.autoStartNextWork;
 
-      renderRecoveryHistory();
-      renderSchedule();
+      const nextMinutes =
+        Number(timerSettings.nextWorkMinutes) || 25;
+      const shouldAutoStart =
+        timerSettings.autoStartNextWork;
 
       if (shouldAutoStart) {
         startTimerForMode(
@@ -3558,13 +3541,11 @@
         return;
       }
 
-      const message = record?.skipped
-        ? "1分未満のため休憩記録を残しませんでした。"
-        : expired
+      resetTimerScreen(
+        expired
           ? "休憩が終わりました。"
-          : "休憩を終了しました。";
-
-      resetTimerScreen(message);
+          : "休憩を終了しました。"
+      );
       showMode("work");
     }
 
@@ -3583,40 +3564,6 @@
         "タイマーを取り消しました。記録は保存されていません。"
       );
     }
-
-    function renderRecoveryHistory() {
-      recoveryHistoryList.replaceChildren();
-
-      const records = loadArray(RECOVERY_STORAGE_KEY)
-        .filter(record => record && record.startedAt)
-        .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-        .slice(0, 10);
-
-      if (records.length === 0) {
-        const item = document.createElement("li");
-        item.className = "empty";
-        item.textContent = "まだ休憩の記録はありません。";
-        recoveryHistoryList.appendChild(item);
-        return;
-      }
-
-      for (const record of records) {
-        const item = document.createElement("li");
-
-        const date = document.createElement("span");
-        date.className = "recovery-date";
-        date.textContent = formatDateTime(record.startedAt);
-
-        const restTime = document.createElement("span");
-        restTime.className = "recovery-detail";
-        restTime.textContent =
-          `約${Number(record.actualMinutes) || 0}分休憩`;
-
-        item.append(date, restTime);
-        recoveryHistoryList.appendChild(item);
-      }
-    }
-
 
     function formatLocalTime(date) {
       return (
@@ -4010,21 +3957,33 @@
         event.style.right = "auto";
       }
 
-      event.title = `${record.start}–${record.end} ${record.title}`;
+      event.title =
+        record.kind === "actual"
+          ? `${durationMinutes}分`
+          : `${record.start}–${record.end} ${record.title}`;
 
       const time = document.createElement("span");
       time.className = "schedule-event-time";
-      time.textContent = `${record.start}–${record.end}`;
+      time.textContent =
+        record.kind === "actual"
+          ? `${durationMinutes}分`
+          : `${record.start}–${record.end}`;
 
       const title = document.createElement("span");
       title.className = "schedule-event-title";
       title.textContent = record.title;
 
+      if (record.kind === "actual") {
+        title.hidden = true;
+      }
+
       event.tabIndex = 0;
       event.setAttribute("role", "button");
       event.setAttribute(
         "aria-label",
-        `${record.start}から${record.end}の${record.title}を編集`
+        record.kind === "actual"
+          ? `${durationMinutes}分の記録を編集`
+          : `${record.start}から${record.end}の${record.title}を編集`
       );
 
       event.addEventListener("click", () => {
@@ -4307,25 +4266,12 @@
       for (const record of records) {
         const item = document.createElement("li");
 
-        const date = document.createElement("span");
-        date.className = "recovery-date";
-        date.textContent = formatDateTime(record.startedAt);
+        const duration = document.createElement("span");
+        duration.className = "recovery-detail";
+        duration.textContent =
+          `${Math.max(0, Number(record.actualMinutes) || 0)}分`;
 
-        const detail = document.createElement("span");
-        detail.className = "recovery-detail";
-        detail.textContent =
-          `予定${record.initialPlannedMinutes}分 ／ 実際約${record.actualMinutes}分`;
-
-        const status = document.createElement("span");
-        status.className = "work-status";
-        if (record.statusType === "extended") {
-          status.classList.add("extended");
-        } else if (record.statusType === "early") {
-          status.classList.add("early");
-        }
-        status.textContent = record.status || "作業終了";
-
-        item.append(date, detail, status);
+        item.appendChild(duration);
         workHistoryList.appendChild(item);
       }
     }
@@ -4607,7 +4553,6 @@
     showTab(storedTab);
     updateNotificationSettingsUI();
     registerNotificationServiceWorker();
-    renderRecoveryHistory();
     renderSchedule();
     renderTaskRecords();
     renderWorkHistory();
