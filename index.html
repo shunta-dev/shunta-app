@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#111111" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -33,6 +33,15 @@
 
     * {
       box-sizing: border-box;
+    }
+
+    html,
+    body,
+    button,
+    input,
+    select,
+    textarea {
+      touch-action: manipulation;
     }
 
     html,
@@ -892,6 +901,12 @@
     }
 
     @media (max-width: 520px) {
+      input,
+      select,
+      textarea {
+        font-size: 16px;
+      }
+
       .timer-overlay-header {
         min-height: 58px;
       }
@@ -2976,6 +2991,26 @@
       }
 
       try {
+        // iPhoneでは、許可要求をタップ操作の直後に実行する必要がある。
+        // Service Worker登録などの非同期処理より先に許可画面を出す。
+        const permission =
+          Notification.permission === "granted"
+            ? "granted"
+            : await Notification.requestPermission();
+
+        if (permission !== "granted") {
+          timerSettings.systemNotificationsEnabled = false;
+          systemNotificationToggle.checked = false;
+          saveTimerSettings();
+          updateNotificationSettingsUI();
+          setNotificationStatus(
+            "通知が許可されませんでした。端末の通知設定を確認してください。"
+          );
+          return false;
+        }
+
+        setNotificationStatus("通知機能を準備しています…");
+
         const registration =
           await registerNotificationServiceWorker();
 
@@ -2983,29 +3018,17 @@
           throw new Error("Service Workerを登録できませんでした。");
         }
 
-        // 必ずボタン・スイッチ操作から直接呼ぶ。
-        const permission =
-          Notification.permission === "granted"
-            ? "granted"
-            : await Notification.requestPermission();
+        await navigator.serviceWorker.ready;
 
-        const allowed = permission === "granted";
-        timerSettings.systemNotificationsEnabled = allowed;
-        systemNotificationToggle.checked = allowed;
+        timerSettings.systemNotificationsEnabled = true;
+        systemNotificationToggle.checked = true;
         saveTimerSettings();
         updateNotificationSettingsUI();
 
-        if (allowed) {
-          setNotificationStatus(
-            "通知をオンにしました。下の通知テストで確認してください。"
-          );
-          return true;
-        }
-
         setNotificationStatus(
-          "通知が許可されませんでした。端末の通知設定を確認してください。"
+          "通知をオンにしました。下の通知テストで確認してください。"
         );
-        return false;
+        return true;
       } catch (error) {
         console.error(error);
         timerSettings.systemNotificationsEnabled = false;
