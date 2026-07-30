@@ -12,6 +12,52 @@
   <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
   <title>Shunta App</title>
+  <script>
+    window.openShuntaNotificationSettings = function(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      const overlay =
+        document.getElementById("notificationSettingsOverlay");
+
+      if (!overlay) return false;
+
+      overlay.hidden = false;
+      overlay.removeAttribute("hidden");
+      overlay.style.display = "block";
+      document.body.style.overflow = "hidden";
+
+      if (
+        typeof window.updateShuntaNotificationSettingsUI ===
+        "function"
+      ) {
+        window.updateShuntaNotificationSettingsUI();
+      }
+
+      return false;
+    };
+
+    window.closeShuntaNotificationSettings = function(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      const overlay =
+        document.getElementById("notificationSettingsOverlay");
+
+      if (!overlay) return false;
+
+      overlay.hidden = true;
+      overlay.setAttribute("hidden", "");
+      overlay.style.display = "";
+      document.body.style.overflow = "";
+
+      return false;
+    };
+  </script>
   <style>
     :root {
       color-scheme: dark;
@@ -1203,6 +1249,12 @@
       text-decoration: underline;
     }
 
+    .timer-settings-main {
+      display: block;
+      width: fit-content;
+      margin: 2px auto 8px;
+    }
+
     .next-work-panel {
       margin-top: auto;
       border-top: 1px solid var(--border);
@@ -1695,7 +1747,8 @@
     <header class="notification-settings-header">
       <button id="closeNotificationSettingsButton"
         class="settings-back-button" type="button"
-        aria-label="通知設定を閉じる">‹</button>
+        aria-label="通知設定を閉じる"
+        onclick="return window.closeShuntaNotificationSettings(event)">‹</button>
       <h2>通知音・バイブの設定</h2>
       <span aria-hidden="true"></span>
     </header>
@@ -1781,6 +1834,13 @@
           data-mode-target="rest" aria-selected="false">休憩</button>
       </div>
 
+      <button id="openNotificationSettingsFromSetupButton"
+        class="timer-settings-link timer-settings-main"
+        type="button"
+        onclick="return window.openShuntaNotificationSettings(event)">
+        通知音・バイブの設定
+      </button>
+
       <div id="customTimerPanel" class="custom-panel" hidden>
         <div class="custom-row">
           <div class="field">
@@ -1861,7 +1921,10 @@
               aria-label="休憩中のイメージ" hidden>🧘</div>
 
             <button id="openTimerSettingsButton" class="timer-settings-link"
-              type="button">通知音・バイブの設定</button>
+              type="button"
+              onclick="return window.openShuntaNotificationSettings(event)">
+              通知音・バイブの設定
+            </button>
           </div>
 
           <section id="nextWorkPanel" class="next-work-panel" hidden>
@@ -2311,7 +2374,7 @@
         refreshPromise = (async () => {
           const stored = readSession();
 
-          if (!stored?.refresh_token) {
+          if (!stored?.refresh_token || !stored?.user) {
             clearSession();
             notifyAuthListeners("SIGNED_OUT", null);
             return {
@@ -2331,10 +2394,18 @@
           );
 
           if (result.error || !result.data?.access_token) {
-            clearSession();
-            notifyAuthListeners("SIGNED_OUT", null);
+            // 圏外や一時的な通信不良でも、保存済みログインは消さない。
+            notifyAuthListeners(
+              "TOKEN_REFRESH_FAILED",
+              stored
+            );
+
             return {
-              data: { session: null, user: null },
+              data: {
+                session: stored,
+                user: stored.user,
+                stale: true
+              },
               error:
                 result.error ||
                 makeError(
@@ -2778,7 +2849,11 @@
     saveTimerSettings();
     let editingScheduleId = null;
 
-    let supabaseClient = null;
+    let supabaseClient =
+      createEmbeddedSupabaseClient(
+        SUPABASE_URL,
+        SUPABASE_PUBLISHABLE_KEY
+      );
     let currentSyncUser = null;
     let cloudSyncTimer = null;
     let applyingCloudState = false;
@@ -3024,11 +3099,11 @@
 
     async function signInForSync() {
       if (!supabaseClient) {
-        setSyncState(
-          "error",
-          "同期機能を準備できませんでした。アプリを開き直してください。"
-        );
-        return;
+        supabaseClient =
+          createEmbeddedSupabaseClient(
+            SUPABASE_URL,
+            SUPABASE_PUBLISHABLE_KEY
+          );
       }
 
       const email = syncEmail.value.trim();
@@ -3085,20 +3160,34 @@
     }
 
     async function initializeCloudSync() {
-      supabaseClient =
-        createEmbeddedSupabaseClient(
-          SUPABASE_URL,
-          SUPABASE_PUBLISHABLE_KEY
-        );
+      if (!supabaseClient) {
+        supabaseClient =
+          createEmbeddedSupabaseClient(
+            SUPABASE_URL,
+            SUPABASE_PUBLISHABLE_KEY
+          );
+      }
 
       supabaseClient.auth.onAuthStateChange((event, session) => {
-        if (event === "SIGNED_OUT" || !session?.user) {
+        if (event === "SIGNED_OUT") {
           handleSignedOut();
           return;
         }
 
+        if (!session?.user) return;
+
+        if (event === "TOKEN_REFRESH_FAILED") {
+          currentSyncUser = session.user;
+          showSyncPanels(true);
+          setSyncState(
+            "offline",
+            "ログインは保持中です。通信が戻ると自動で同期します。"
+          );
+          return;
+        }
+
         if (
-          event === "SIGNED_IN" &&
+          ["SIGNED_IN", "TOKEN_REFRESHED"].includes(event) &&
           currentSyncUser?.id !== session.user.id
         ) {
           handleSignedIn(session.user);
@@ -3110,6 +3199,22 @@
         error
       } = await supabaseClient.auth.getSession();
 
+      if (session?.user) {
+        if (error) {
+          console.error(error);
+          currentSyncUser = session.user;
+          showSyncPanels(true);
+          setSyncState(
+            "offline",
+            "ログインは保持中です。通信が戻ると自動で同期します。"
+          );
+          return;
+        }
+
+        await handleSignedIn(session.user);
+        return;
+      }
+
       if (error) {
         console.error(error);
         setSyncState(
@@ -3119,10 +3224,32 @@
         return;
       }
 
+      handleSignedOut();
+    }
+
+    async function resumeCloudSession() {
+      if (!supabaseClient) return;
+
+      const {
+        data: { session },
+        error
+      } = await supabaseClient.auth.getSession();
+
       if (session?.user) {
-        await handleSignedIn(session.user);
-      } else {
-        handleSignedOut();
+        currentSyncUser = session.user;
+        showSyncPanels(true);
+
+        if (error) {
+          setSyncState(
+            "offline",
+            "ログインは保持中です。通信が戻ると自動で同期します。"
+          );
+          return;
+        }
+
+        await pullCloudState({
+          createWhenMissing: true
+        });
       }
     }
 
@@ -3339,6 +3466,9 @@
         );
       }
     }
+
+    window.updateShuntaNotificationSettingsUI =
+      updateNotificationSettingsUI;
 
     function openNotificationSettings() {
       updateNotificationSettingsUI();
@@ -4888,14 +5018,25 @@
     );
 
     document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible") return;
+
       if (
-        document.visibilityState === "visible" &&
         activeTimer &&
         !activeTimer.isPaused &&
         Date.now() >= activeTimer.endTime
       ) {
         handleTimerExpired();
       }
+
+      resumeCloudSession();
+    });
+
+    window.addEventListener("pageshow", () => {
+      resumeCloudSession();
+    });
+
+    window.addEventListener("online", () => {
+      resumeCloudSession();
     });
 
     window.addEventListener("focus", () => {
@@ -4989,6 +5130,7 @@
       storedTab = "timer";
     }
 
+    initializeCloudSync();
     showMode("work");
     showTab(storedTab);
     updateNotificationSettingsUI();
@@ -4996,7 +5138,6 @@
     renderSchedule();
     renderTaskRecords();
     renderWorkHistory();
-    initializeCloudSync();
   </script>
 </body>
 </html>
