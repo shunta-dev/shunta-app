@@ -2106,7 +2106,6 @@
     </button>
   </nav>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     function installZoomGuards() {
       const preventGesture = event => {
@@ -2177,6 +2176,454 @@
     const SUPABASE_URL = "https://rpqtdcroxxffjygunaui.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY =
       "sb_publishable_xPFkIrC2ouvoi5g5JMvQWw_gCXJOU9n";
+    const SUPABASE_AUTH_STORAGE_KEY =
+      "shunta-supabase-session-v1";
+
+    function createEmbeddedSupabaseClient(url, publishableKey) {
+      const authListeners = new Set();
+      let refreshPromise = null;
+
+      function makeError(message, details = null) {
+        return {
+          message:
+            message ||
+            "Supabaseとの通信中にエラーが発生しました。",
+          details
+        };
+      }
+
+      function readSession() {
+        try {
+          const raw =
+            localStorage.getItem(SUPABASE_AUTH_STORAGE_KEY);
+
+          if (!raw) return null;
+
+          const session = JSON.parse(raw);
+
+          if (
+            !session ||
+            !session.access_token ||
+            !session.refresh_token ||
+            !session.user
+          ) {
+            return null;
+          }
+
+          return session;
+        } catch {
+          return null;
+        }
+      }
+
+      function saveSession(session) {
+        if (!session) return null;
+
+        const normalized = {
+          ...session,
+          expires_at:
+            Number(session.expires_at) ||
+            Math.floor(Date.now() / 1000) +
+              Number(session.expires_in || 3600)
+        };
+
+        localStorage.setItem(
+          SUPABASE_AUTH_STORAGE_KEY,
+          JSON.stringify(normalized)
+        );
+
+        return normalized;
+      }
+
+      function clearSession() {
+        localStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
+      }
+
+      function notifyAuthListeners(event, session) {
+        for (const listener of authListeners) {
+          try {
+            listener(event, session);
+          } catch (error) {
+            console.error(error);
+          }
+        }
+      }
+
+      async function parseResponse(response) {
+        const text = await response.text();
+        let body = null;
+
+        if (text) {
+          try {
+            body = JSON.parse(text);
+          } catch {
+            body = text;
+          }
+        }
+
+        if (response.ok) {
+          return { data: body, error: null };
+        }
+
+        const message =
+          body?.message ||
+          body?.msg ||
+          body?.error_description ||
+          body?.error ||
+          (typeof body === "string" ? body : "") ||
+          `通信に失敗しました（${response.status}）`;
+
+        return {
+          data: null,
+          error: makeError(message, body)
+        };
+      }
+
+      async function authRequest(path, options = {}) {
+        try {
+          const response = await fetch(
+            `${url}/auth/v1/${path}`,
+            {
+              ...options,
+              headers: {
+                apikey: publishableKey,
+                "Content-Type": "application/json",
+                ...(options.headers || {})
+              }
+            }
+          );
+
+          return parseResponse(response);
+        } catch (error) {
+          return {
+            data: null,
+            error: makeError(
+              "Supabaseへ接続できませんでした。通信状態を確認してください。",
+              error
+            )
+          };
+        }
+      }
+
+      async function refreshSession() {
+        if (refreshPromise) return refreshPromise;
+
+        refreshPromise = (async () => {
+          const stored = readSession();
+
+          if (!stored?.refresh_token) {
+            clearSession();
+            notifyAuthListeners("SIGNED_OUT", null);
+            return {
+              data: { session: null, user: null },
+              error: null
+            };
+          }
+
+          const result = await authRequest(
+            "token?grant_type=refresh_token",
+            {
+              method: "POST",
+              body: JSON.stringify({
+                refresh_token: stored.refresh_token
+              })
+            }
+          );
+
+          if (result.error || !result.data?.access_token) {
+            clearSession();
+            notifyAuthListeners("SIGNED_OUT", null);
+            return {
+              data: { session: null, user: null },
+              error:
+                result.error ||
+                makeError(
+                  "ログイン情報を更新できませんでした。"
+                )
+            };
+          }
+
+          const session = saveSession({
+            ...result.data,
+            refresh_token:
+              result.data.refresh_token ||
+              stored.refresh_token
+          });
+
+          notifyAuthListeners(
+            "TOKEN_REFRESHED",
+            session
+          );
+
+          return {
+            data: {
+              session,
+              user: session.user
+            },
+            error: null
+          };
+        })();
+
+        try {
+          return await refreshPromise;
+        } finally {
+          refreshPromise = null;
+        }
+      }
+
+      async function getValidSession() {
+        const session = readSession();
+
+        if (!session) {
+          return {
+            data: { session: null, user: null },
+            error: null
+          };
+        }
+
+        const expiresAt =
+          Number(session.expires_at) || 0;
+        const now =
+          Math.floor(Date.now() / 1000);
+
+        if (expiresAt > now + 90) {
+          return {
+            data: {
+              session,
+              user: session.user
+            },
+            error: null
+          };
+        }
+
+        return refreshSession();
+      }
+
+      async function authorizedRequest(
+        path,
+        options = {}
+      ) {
+        const sessionResult =
+          await getValidSession();
+        const session =
+          sessionResult.data?.session;
+
+        if (!session?.access_token) {
+          return {
+            data: null,
+            error:
+              sessionResult.error ||
+              makeError(
+                "ログインが切れました。もう一度ログインしてください。"
+              )
+          };
+        }
+
+        try {
+          const response = await fetch(
+            `${url}/rest/v1/${path}`,
+            {
+              ...options,
+              headers: {
+                apikey: publishableKey,
+                Authorization:
+                  `Bearer ${session.access_token}`,
+                "Content-Type": "application/json",
+                ...(options.headers || {})
+              }
+            }
+          );
+
+          return parseResponse(response);
+        } catch (error) {
+          return {
+            data: null,
+            error: makeError(
+              "クラウドへ接続できませんでした。通信状態を確認してください。",
+              error
+            )
+          };
+        }
+      }
+
+      function from(tableName) {
+        const table =
+          encodeURIComponent(tableName);
+
+        return {
+          async upsert(payload, options = {}) {
+            const conflict =
+              options.onConflict
+                ? `?on_conflict=${encodeURIComponent(
+                    options.onConflict
+                  )}`
+                : "";
+
+            const result =
+              await authorizedRequest(
+                `${table}${conflict}`,
+                {
+                  method: "POST",
+                  headers: {
+                    Prefer:
+                      "resolution=merge-duplicates,return=minimal"
+                  },
+                  body: JSON.stringify(payload)
+                }
+              );
+
+            return {
+              data: result.data,
+              error: result.error
+            };
+          },
+
+          select(columns = "*") {
+            const filters = [];
+
+            return {
+              eq(column, value) {
+                filters.push(
+                  `${encodeURIComponent(column)}=eq.${encodeURIComponent(
+                    String(value)
+                  )}`
+                );
+                return this;
+              },
+
+              async maybeSingle() {
+                const query = [
+                  `select=${encodeURIComponent(columns)}`,
+                  ...filters,
+                  "limit=1"
+                ].join("&");
+
+                const result =
+                  await authorizedRequest(
+                    `${table}?${query}`,
+                    { method: "GET" }
+                  );
+
+                if (result.error) {
+                  return {
+                    data: null,
+                    error: result.error
+                  };
+                }
+
+                const rows =
+                  Array.isArray(result.data)
+                    ? result.data
+                    : [];
+
+                return {
+                  data: rows[0] || null,
+                  error: null
+                };
+              }
+            };
+          }
+        };
+      }
+
+      const auth = {
+        async signInWithPassword({ email, password }) {
+          const result = await authRequest(
+            "token?grant_type=password",
+            {
+              method: "POST",
+              body: JSON.stringify({
+                email,
+                password
+              })
+            }
+          );
+
+          if (
+            result.error ||
+            !result.data?.access_token
+          ) {
+            return {
+              data: {
+                user: null,
+                session: null
+              },
+              error:
+                result.error ||
+                makeError(
+                  "ログインできませんでした。"
+                )
+            };
+          }
+
+          const session =
+            saveSession(result.data);
+
+          notifyAuthListeners(
+            "SIGNED_IN",
+            session
+          );
+
+          return {
+            data: {
+              user: session.user,
+              session
+            },
+            error: null
+          };
+        },
+
+        async signOut() {
+          const session = readSession();
+
+          if (session?.access_token) {
+            try {
+              await authRequest("logout", {
+                method: "POST",
+                headers: {
+                  Authorization:
+                    `Bearer ${session.access_token}`
+                }
+              });
+            } catch {
+              // 通信できなくても端末側ではログアウトする
+            }
+          }
+
+          clearSession();
+          notifyAuthListeners(
+            "SIGNED_OUT",
+            null
+          );
+
+          return { error: null };
+        },
+
+        async getSession() {
+          return getValidSession();
+        },
+
+        onAuthStateChange(callback) {
+          authListeners.add(callback);
+
+          return {
+            data: {
+              subscription: {
+                unsubscribe() {
+                  authListeners.delete(callback);
+                }
+              }
+            }
+          };
+        }
+      };
+
+      setInterval(() => {
+        getValidSession().catch(console.error);
+      }, 60 * 1000);
+
+      return { auth, from };
+    }
 
     const CLOUD_STORAGE_KEYS = [
       TASK_STORAGE_KEY,
@@ -2579,7 +3026,7 @@
       if (!supabaseClient) {
         setSyncState(
           "error",
-          "Supabaseを読み込めませんでした。インターネット接続を確認してください。"
+          "同期機能を準備できませんでした。アプリを開き直してください。"
         );
         return;
       }
@@ -2610,7 +3057,7 @@
         console.error(error);
         setSyncState(
           "error",
-          "ログインできませんでした。メールアドレスとパスワードを確認してください。"
+          `ログインできませんでした：${error.message}`
         );
         return;
       }
@@ -2638,18 +3085,11 @@
     }
 
     async function initializeCloudSync() {
-      if (!window.supabase?.createClient) {
-        setSyncState(
-          "error",
-          "Supabaseを読み込めませんでした。インターネット接続を確認してください。"
+      supabaseClient =
+        createEmbeddedSupabaseClient(
+          SUPABASE_URL,
+          SUPABASE_PUBLISHABLE_KEY
         );
-        return;
-      }
-
-      supabaseClient = window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_PUBLISHABLE_KEY
-      );
 
       supabaseClient.auth.onAuthStateChange((event, session) => {
         if (event === "SIGNED_OUT" || !session?.user) {
