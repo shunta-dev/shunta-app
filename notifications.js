@@ -309,8 +309,26 @@
       }
     }
 
+    let completionSoundTimers = [];
+
+    function playCompletionAlertSequence() {
+      for (const timerId of completionSoundTimers) {
+        clearTimeout(timerId);
+      }
+
+      completionSoundTimers = [];
+
+      for (const delay of [0, 3000, 6000]) {
+        const timerId = setTimeout(() => {
+          playAlertSound();
+        }, delay);
+
+        completionSoundTimers.push(timerId);
+      }
+    }
+
     function sendCompletionNotification(mode) {
-      playAlertSound();
+      playCompletionAlertSequence();
       vibrateAlert();
 
       if (!timerSettings.systemNotificationsEnabled) return;
